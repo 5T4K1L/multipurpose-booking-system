@@ -20,3 +20,5 @@ Thumbs.db
 bin/
 
 tmp/
+
+docker-compose.yml
