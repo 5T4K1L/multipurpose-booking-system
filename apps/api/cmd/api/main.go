@@ -7,7 +7,9 @@ import (
 	"os"
 
 	"multipurpose-booking-system/api/internal/database"
+	"multipurpose-booking-system/api/internal/db"
 	"multipurpose-booking-system/api/internal/migrations"
+	"multipurpose-booking-system/api/internal/repository"
 	"multipurpose-booking-system/api/internal/server"
 )
 
@@ -31,11 +33,17 @@ func main() {
 	}
 
 	// Connect to PostgreSQL after migrations succeed.
-	db, err := database.Connect(ctx)
+	dbPool, err := database.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer dbPool.Close()
+
+	// Create the generated sqlc query layer.
+	queries := db.New(dbPool)
+
+	// Create the user repository.
+	_ = repository.NewUserRepository(queries)
 
 	mux := http.NewServeMux()
 
