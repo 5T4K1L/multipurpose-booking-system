@@ -75,3 +75,43 @@ Current phase.
 Only the currently authorized phase may be implemented.
 
 When a phase is complete, stop and review before proceeding.
+
+## Phase 0 Status
+
+Phase 0 — Engineering Foundation is currently in final verification.
+
+The engineering foundation has been established and the core development flow has been verified:
+
+```text
+Next.js
+   ↓
+Go API
+   ↓
+PostgreSQL
+```
+
+Verified areas include:
+
+- repository foundation
+- project documentation
+- Next.js frontend foundation
+- Go API foundation
+- PostgreSQL with Docker Compose
+- Go-to-PostgreSQL connectivity
+- SQL migration foundation
+- API health endpoint
+- frontend-to-API connectivity
+- basic automated tests
+- lint and static analysis
+- production build verification
+
+Before Phase 1 begins:
+
+- complete the final Phase 0 review
+- verify all Phase 0 completion criteria
+- synchronize project documentation
+- record known issues
+- confirm the repository is clean
+- formally close Phase 0
+
+Phase 1 must not begin until Phase 0 is formally completed.

@@ -78,3 +78,22 @@ Where appropriate, a slice should include:
 - documentation
 
 Avoid implementing large incomplete subsystems in isolation.
+
+---
+
+## ADR-0007 — Free-First Development Workflow
+
+Status: Accepted
+
+Development will be structured so that the project can continue using free-tier development capabilities wherever reasonably possible.
+
+The workflow prioritizes:
+
+- small verifiable tasks
+- limited context usage
+- incremental changes
+- local development
+- provider-agnostic architecture
+- avoiding unnecessary dependency on paid tooling
+
+Free-tier constraints must not justify reductions in security, correctness, maintainability, or scalability.

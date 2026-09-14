@@ -115,3 +115,36 @@ At the completion of every authorized phase:
 7. Record known issues.
 8. Record required manual actions.
 9. Stop before the next phase.
+
+## Current Implementation Status
+
+Phase 0 — Engineering Foundation is substantially implemented.
+
+The current verified development stack is:
+
+```text
+Next.js
+   ↓
+Go API
+   ↓
+PostgreSQL
+```
+
+The system currently supports:
+
+- Next.js frontend foundation
+- Go API foundation
+- PostgreSQL development database
+- PostgreSQL connection from Go
+- API health endpoint
+- Frontend-to-API connectivity
+- Basic automated API tests
+- Go test verification
+- Go vet verification
+- Go build verification
+- Frontend lint verification
+- Frontend production build verification
+
+No product-domain functionality has been implemented yet.
+
+Authentication, authorization, multi-tenancy, businesses, customers, services, staff, resources, availability, bookings, CRM, messaging, notifications, marketplace functionality, payments, subscriptions, billing, search, and production infrastructure remain outside the current authorized scope.
