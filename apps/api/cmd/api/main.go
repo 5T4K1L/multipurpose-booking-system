@@ -4,15 +4,33 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"multipurpose-booking-system/api/internal/database"
+	"multipurpose-booking-system/api/internal/migrations"
 	"multipurpose-booking-system/api/internal/server"
 )
 
 func main() {
 	ctx := context.Background()
 
-	// Connect to PostgreSQL before starting the API.
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL is not set")
+	}
+
+	// Use the repository migration directory by default.
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	if migrationsPath == "" {
+		migrationsPath = "../../migrations"
+	}
+
+	// Apply pending database migrations before serving requests.
+	if err := migrations.Run(databaseURL, migrationsPath); err != nil {
+		log.Fatalf("database migration failed: %v", err)
+	}
+
+	// Connect to PostgreSQL after migrations succeed.
 	db, err := database.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -29,6 +47,7 @@ func main() {
 		Handler: mux,
 	}
 
+	log.Println("Database migrations verified")
 	log.Println("PostgreSQL connection verified")
 	log.Println("Server is running on http://localhost:8080")
 
