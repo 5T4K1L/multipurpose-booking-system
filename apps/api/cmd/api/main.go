@@ -1,11 +1,22 @@
 package main
 
 import (
+	"context"
 	"log"
+	"multipurpose-booking-system/api/internal/database"
 	"net/http"
 )
 
 func main() {
+	ctx := context.Background()
+
+	// Connect to PostgreSQL before starting the server
+	db, err := database.Connect(ctx)
+	if err != nil {
+		log.Fatalf("Failed to connect to the database: %v", err)
+	}
+	defer db.Close()
+
 	mux := http.NewServeMux()
 
 	server := &http.Server{
