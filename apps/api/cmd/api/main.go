@@ -2,60 +2,37 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
-	"multipurpose-booking-system/api/internal/database"
 	"net/http"
-)
 
-// HealthResponse contains the API health status
-type HealthResponse struct {
-	Status string `json:"status"`
-}
+	"multipurpose-booking-system/api/internal/database"
+	"multipurpose-booking-system/api/internal/server"
+)
 
 func main() {
 	ctx := context.Background()
 
-	// Connect to PostgreSQL before starting the server
+	// Connect to PostgreSQL before starting the API.
 	db, err := database.Connect(ctx)
 	if err != nil {
-		log.Fatalf("Failed to connect to the database: %v", err)
+		log.Fatal(err)
 	}
 	defer db.Close()
 
 	mux := http.NewServeMux()
 
-	// Health endpoint used to verify that the API is running and healthy
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		// Allow the local Next.js development server to call this endpoint.
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	// Register the API health endpoint.
+	mux.HandleFunc("/health", server.HealthHandler)
 
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
-		response := HealthResponse{
-			Status: "ok",
-		}
-
-		// Return the health status as JSON.
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			log.Printf("failed to encode health response: %v", err)
-		}
-	})
-
-	server := &http.Server{
+	httpServer := &http.Server{
 		Addr:    ":8080",
 		Handler: mux,
 	}
 
+	log.Println("PostgreSQL connection verified")
 	log.Println("Server is running on http://localhost:8080")
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Could not listen on %s: %v\n", server.Addr, err)
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
 	}
 }
