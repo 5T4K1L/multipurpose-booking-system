@@ -45,6 +45,12 @@ func main() {
 	// Create the user repository.
 	_ = repository.NewUserRepository(queries)
 
+	// Create the authentication repository.
+	authRepository := repository.NewAuthRepository(queries)
+
+	// Keep the repository ready for the authentication service.
+	_ = authRepository
+
 	mux := http.NewServeMux()
 
 	// Register the API health endpoint.

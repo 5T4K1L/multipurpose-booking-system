@@ -15,3 +15,21 @@ type User struct {
 	CreatedAt pgtype.Timestamp
 	UpdatedAt pgtype.Timestamp
 }
+
+type UserCredential struct {
+	ID           int64
+	UserID       int64
+	PasswordHash string
+	CreatedAt    pgtype.Timestamp
+	UpdatedAt    pgtype.Timestamp
+}
+
+type UserSession struct {
+	ID         int64
+	UserID     int64
+	TokenHash  string
+	ExpiresAt  pgtype.Timestamp
+	CreatedAt  pgtype.Timestamp
+	LastSeenAt pgtype.Timestamp
+	RevokedAt  pgtype.Timestamp
+}
