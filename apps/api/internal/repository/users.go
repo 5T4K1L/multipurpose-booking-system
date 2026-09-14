@@ -38,3 +38,20 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (db.U
 
 	return user, nil
 }
+
+// CreateUser creates and returns a user.
+func (r *UserRepository) CreateUser(
+	ctx context.Context,
+	email string,
+	username string,
+) (db.User, error) {
+	user, err := r.queries.CreateUser(ctx, db.CreateUserParams{
+		Email:    email,
+		Username: username,
+	})
+	if err != nil {
+		return db.User{}, fmt.Errorf("create user: %w", err)
+	}
+
+	return user, nil
+}

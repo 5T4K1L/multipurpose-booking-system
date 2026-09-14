@@ -9,6 +9,42 @@ import (
 	"context"
 )
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (
+    email,
+    username
+)
+VALUES (
+    $1,
+    $2
+)
+RETURNING
+    id,
+    email,
+    username,
+    created_at,
+    updated_at
+`
+
+type CreateUserParams struct {
+	Email    string
+	Username string
+}
+
+// Creates a user for database integration tests and future application use.
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.Username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT
     id,
@@ -58,3 +94,4 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 	)
 	return i, err
 }
+
