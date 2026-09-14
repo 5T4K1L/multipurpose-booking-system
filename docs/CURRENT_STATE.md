@@ -2,132 +2,128 @@
 
 ## Current Phase
 
-PHASE 0 — Engineering Foundation
+PHASE 1 — System Architecture
 
 ## Current Step
 
-0.12 — Documentation and Current-State Update
+1.11 — Final Phase 1 Review and Closure
 
 ## Completed
 
-### Repository Foundation
+### Phase 0 — Engineering Foundation
 
-- Git repository initialized.
-- Main branch created.
-- Initial repository structure created.
-- `.gitignore` created.
-- `.env.example` created.
-- `README.md` created.
+Phase 0 has been completed and verified.
 
-### Documentation Foundation
+Completed:
 
-- `PROJECT_CONTEXT.md` created.
-- `CURRENT_STATE.md` created.
-- `ARCHITECTURE.md` created.
-- `DECISIONS.md` created.
-- `ROADMAP.md` created.
+- Git repository foundation
+- Documentation foundation
+- Next.js frontend foundation
+- Go API foundation
+- PostgreSQL with Docker Compose
+- SQL migration foundation
+- Go-to-PostgreSQL connectivity
+- API health endpoint
+- Frontend-to-API connectivity
+- Basic automated API tests
+- Go test verification
+- Go vet verification
+- Go build verification
+- Frontend lint verification
+- Frontend production build verification
 
-### Frontend Foundation
+### Phase 1 — System Architecture
 
-- Next.js application created under `apps/web`.
-- TypeScript enabled.
-- Tailwind CSS enabled.
-- App Router enabled.
-- Development server verified.
-- Frontend successfully communicates with the Go API.
+Completed architecture documentation:
 
-### Backend Foundation
+- Backend architecture
+- API architecture and conventions
+- Frontend architecture and conventions
+- Configuration architecture
+- Error handling and logging architecture
+- Security architecture baseline
+- Database architecture and conventions
+- Package architecture
+- Application lifecycle and dependency wiring
+- Consolidated architecture baseline
 
-- Go API created under `apps/api`.
-- Go module initialized.
-- HTTP server implemented.
-- PostgreSQL connection implemented with pgx.
-- Health endpoint implemented.
-- Health endpoint tests implemented.
-- Go tests verified.
-- Go vet verified.
-- Go build verified.
+## Current Architecture
 
-### Database Foundation
-
-- PostgreSQL configured through Docker Compose.
-- PostgreSQL runs locally in Docker.
-- Database configuration:
-  - Database: `booking_db`
-  - User: `booking_user`
-  - Port: `5432`
-
-- SQL migration foundation created.
-
-### Frontend ↔ Backend Connectivity
-
-Verified flow:
-
-Browser
-↓
+```text
 Next.js
-↓
-Go API
-↓
+   ↓
+HTTP API
+   ↓
+Go
+   ↓
 PostgreSQL
+```
 
-The frontend successfully calls:
+Backend dependency direction:
 
-`GET /health`
+```text
+cmd/api
+   ↓
+server
+   ↓
+service
+   ↓
+repository
+   ↓
+database
+```
 
-and receives:
-
-`{"status":"ok"}`
-
-## Verification Status
-
-- Go tests: passed
-- Go vet: passed
-- Go build: passed
-- Frontend lint: passed
-- Frontend production build: passed
-- PostgreSQL: verified
-- Go API: verified
-- Health endpoint: verified
-- Frontend-to-API connectivity: verified
+The system uses a modular monolith architecture.
 
 ## Important Technical Decisions
 
-- Modular monolith architecture.
-- Next.js for the frontend.
+- Modular monolith rather than microservices.
+- Next.js + React + TypeScript for the frontend.
 - Go for the backend.
-- PostgreSQL as the primary database.
+- PostgreSQL as the primary data store.
 - pgx for PostgreSQL connectivity.
-- SQL migrations for database schema changes.
+- sqlc for typed SQL access.
+- SQL migrations for schema changes.
+- Explicit dependency wiring.
+- Server-side security enforcement.
 - Responsive UI from the beginning.
 - Vertical feature slices.
-- Free-first development approach.
-- Only the currently authorized phase may be implemented.
+- Free-first development workflow.
+- Small, verifiable implementation steps.
 
 ## Known Issues
 
 - Migration execution functionality is not fully implemented yet.
-- Authentication and all product functionality are intentionally not implemented.
-- The current frontend is only a foundation/connectivity verification screen.
+- Authentication and authorization are not implemented.
+- Multi-tenancy is not implemented.
+- No product-domain functionality has been implemented yet.
+- The frontend currently contains only the Phase 0 connectivity verification UI.
 
 ## Current Scope Boundary
 
-The following remain intentionally out of scope for Phase 0:
+The following remain intentionally unimplemented:
 
 - authentication
-- authorization
+- registration
+- login
+- password reset
+- RBAC
 - multi-tenancy
+- organizations
 - businesses
+- customers
 - services
 - staff
 - resources
 - availability
-- booking
+- booking engine
 - CRM
+- import/export
 - messaging
 - notifications
-- marketplace
+- background jobs
 - search
+- marketplace
 - payments
 - subscriptions
 - billing
@@ -135,6 +131,38 @@ The following remain intentionally out of scope for Phase 0:
 - production deployment
 - advanced infrastructure
 
+## Documentation Source of Truth
+
+The following documents define the current project architecture and development rules:
+
+```text
+PROJECT_CONTEXT.md
+CURRENT_STATE.md
+ARCHITECTURE.md
+BACKEND_ARCHITECTURE.md
+API_ARCHITECTURE.md
+FRONTEND_ARCHITECTURE.md
+CONFIGURATION_ARCHITECTURE.md
+ERROR_HANDLING_AND_LOGGING.md
+SECURITY_ARCHITECTURE.md
+DATABASE_ARCHITECTURE.md
+PACKAGE_ARCHITECTURE.md
+APPLICATION_LIFECYCLE.md
+ARCHITECTURE_BASELINE.md
+DECISIONS.md
+ROADMAP.md
+```
+
+## Phase 1 Status
+
+Phase 1 — System Architecture is complete.
+
+The architecture baseline is established and documented.
+
+No Phase 2 database-domain implementation has begun.
+
 ## Next Step
 
-Complete the final Phase 0 review and verification before moving to the next authorized phase.
+Phase 2 — Database Architecture and Schema Foundation.
+
+Phase 2 must begin from the documented architecture and must not introduce authentication, booking, CRM, payments, or other later-phase functionality.
