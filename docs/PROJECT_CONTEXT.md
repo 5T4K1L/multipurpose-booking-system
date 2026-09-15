@@ -148,3 +148,5 @@ The system currently supports:
 No product-domain functionality has been implemented yet.
 
 Authentication, authorization, multi-tenancy, businesses, customers, services, staff, resources, availability, bookings, CRM, messaging, notifications, marketplace functionality, payments, subscriptions, billing, search, and production infrastructure remain outside the current authorized scope.
+
+No OAuth implementation details needed unless this file is explicitly your product/project overview.

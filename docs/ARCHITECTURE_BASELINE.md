@@ -372,3 +372,5 @@ Future development should consult these documents before making architectural ch
 Phase 1 is complete when the architecture is sufficiently defined to begin implementing the next authorized system capability without repeatedly redesigning the foundation.
 
 The architecture should provide structure without unnecessary complexity.
+
+Only update if this file is your baseline/source-of-truth architecture document. If it is intended to remain a historical baseline, do not modify it.

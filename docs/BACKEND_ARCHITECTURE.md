@@ -243,3 +243,5 @@ Exceptions require an explicit architectural decision documented in `DECISIONS.m
 ## Phase 1 Principle
 
 Architecture should provide enough structure to support the current product requirements without creating unnecessary complexity for hypothetical future requirements.
+
+Only add OAuth provider/auth-service layering if that structure is not already covered by AUTHENTICATION_ARCHITECTURE.md. Avoid duplicating detailed OAuth rules.

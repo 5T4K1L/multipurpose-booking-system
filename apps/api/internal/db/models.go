@@ -24,6 +24,15 @@ type UserCredential struct {
 	UpdatedAt    pgtype.Timestamp
 }
 
+type UserOauthIdentity struct {
+	ID              int64
+	UserID          int64
+	Provider        string
+	ProviderSubject string
+	CreatedAt       pgtype.Timestamp
+	UpdatedAt       pgtype.Timestamp
+}
+
 type UserSession struct {
 	ID         int64
 	UserID     int64

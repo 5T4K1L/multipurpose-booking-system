@@ -467,3 +467,5 @@ Maintainable
 ```
 
 from the beginning.
+
+No major change yet. The actual "Continue with Google/Apple" UI belongs when the authentication flows are integrated into the frontend.

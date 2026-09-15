@@ -2,476 +2,1143 @@
 
 ## Purpose
 
-This document defines the baseline security principles for the Universal Booking Platform.
+This document defines the security architecture for the Universal Booking Platform.
 
-Security is a system-wide requirement and must be considered during every feature phase.
+Security is a system-wide requirement rather than a single implementation phase.
 
-## Core Security Principles
+The platform must be designed so that:
 
-The system must follow these principles:
+- untrusted input is never treated as trusted
+- authorization is enforced server-side
+- tenants cannot access each other's data
+- authentication secrets are protected
+- sensitive operations are auditable
+- failures do not expose internal information
+- security controls are layered
+- security improvements remain compatible with the free-first development strategy
 
-- never trust client input
-- enforce security on the server
-- use least privilege
-- minimize sensitive data
-- validate all external input
-- protect secrets
-- fail securely
-- prefer explicit authorization
-- avoid exposing internal implementation details
-- keep dependencies maintained
-- log security-relevant events appropriately
+The project targets OWASP ASVS Level 2 as the baseline security standard, with selective Level 3 controls applied to especially sensitive areas.
 
-## Trust Boundaries
+This does not represent a claim of ASVS compliance or external security certification.
 
-The system has several trust boundaries:
+---
 
-```text
+# Core Security Principles
+
+The platform follows these principles:
+
+```text id="s1a9k3"
+Never trust the client
+Server-side enforcement
+Least privilege
+Defense in depth
+Secure defaults
+Minimize sensitive data
+Fail securely
+Explicit authorization
+Strong tenant isolation
+Safe dependency usage
+Auditable security events
+```
+
+Security controls should be implemented as close as possible to the boundary they protect.
+
+---
+
+# Trust Boundaries
+
+The primary trust boundaries are:
+
+```text id="b2c8m4"
 Browser
-   │
-   │ Untrusted input
-   ▼
+   ↓
+Next.js
+   ↓
 Go API
-   │
-   │ Controlled application logic
-   ▼
+   ↓
 PostgreSQL
 ```
 
-The browser must never be considered a trusted environment.
+Additional external boundaries include:
 
-## Frontend Security
+```text id="d4e7p6"
+Go API
+   ↓
+Google
+Apple
+Payment providers
+Email providers
+Storage providers
+Messaging providers
+Search providers
+```
 
-Frontend validation exists primarily for user experience.
+Data crossing any trust boundary must be validated and authenticated as appropriate.
 
-It must never replace backend validation or authorization.
+---
 
-The backend must independently verify:
+# Browser Security
+
+The browser is untrusted.
+
+The frontend must never be treated as the authority for:
 
 - identity
-- permissions
-- resource ownership
-- tenant access
-- business rules
-- financial rules
+- user role
+- tenant
+- business ownership
+- booking ownership
+- payment state
+- entitlement state
 
-when those capabilities are implemented.
+The browser may request an operation.
 
-## Input Validation
+The backend decides whether that operation is permitted.
 
-Every externally supplied value must be validated before use.
+---
 
-This includes:
+# Frontend Security
 
-- request bodies
-- query parameters
+The Next.js application must:
+
+- avoid exposing secrets
+- avoid trusting client-controlled permissions
+- escape untrusted content
+- validate user input before submission
+- display safe error messages
+- avoid storing sensitive authentication material unnecessarily
+
+Environment variables intended for the browser must never contain server-only secrets.
+
+---
+
+# API Security Boundary
+
+The Go API is the primary enforcement boundary for application operations.
+
+Every protected request must establish:
+
+```text id="e5f6g7"
+authentication
+    ↓
+authorization
+    ↓
+tenant/resource access
+    ↓
+service operation
+```
+
+A successful frontend check is never sufficient authorization.
+
+---
+
+# Input Validation
+
+All external input must be treated as untrusted.
+
+Validate:
+
+- JSON bodies
 - path parameters
+- query parameters
 - headers
-- uploaded data
-- imported records
+- uploaded files
 - webhook payloads
-- external API responses
+- OAuth callbacks
+- pagination values
+- filters
+- sort values
 
-Validation must occur on the server.
+Validation must occur before the input reaches sensitive business logic.
 
-## Output Handling
+---
 
-User-controlled content must be handled safely.
+# Output Safety
 
-The application must avoid unsafe HTML rendering unless the content has been appropriately sanitized and the behavior is explicitly required.
+Responses must expose only information the authenticated principal is authorized to receive.
 
-Avoid constructing HTML from untrusted values.
+Do not return:
 
-## SQL Injection Prevention
+- password hashes
+- session secrets
+- OAuth tokens
+- OAuth private keys
+- client secrets
+- internal database errors
+- internal stack traces
+- sensitive tenant information
 
-Database queries must use parameterized queries or safe query-generation mechanisms.
+---
 
-Do not concatenate user input into SQL statements.
+# SQL Injection Protection
 
-Unsafe:
+SQL must never be constructed from untrusted strings through direct concatenation.
 
-```text
-"SELECT * FROM customers WHERE name = '" + userInput + "'"
+The application uses:
+
+```text id="h8i9j0"
+PostgreSQL
+pgx
+sqlc
+parameterized queries
 ```
 
-Preferred:
+User-controlled values must be passed as parameters.
 
-```text
-Parameterized query
+Dynamic sorting, filtering, or column selection must use explicit allowlists rather than direct SQL interpolation.
+
+---
+
+# Authentication Security
+
+Authentication establishes the local application identity.
+
+Supported mechanisms include:
+
+```text id="k1l2m3"
+Password
+Google OAuth/OIDC
+Apple Sign in with Apple
 ```
 
-## Authentication
+All mechanisms must eventually produce the same local application identity and normal application session.
 
-Authentication is intentionally not implemented yet.
+---
 
-When introduced, authentication must:
-
-- securely verify identity
-- protect credentials
-- support secure sessions or tokens
-- prevent credential enumeration where applicable
-- provide appropriate account recovery controls
-- invalidate sessions appropriately
+# Password Security
 
 Passwords must never be stored in plaintext.
 
-## Password Security
+The application uses a strong password hashing mechanism based on Argon2id.
 
-When password authentication is implemented:
+Passwords must never appear in:
 
-- use a modern password-hashing algorithm
-- use appropriate work factors
-- never store plaintext passwords
-- never log passwords
-- never return passwords through API responses
-
-The exact password hashing approach will be selected before authentication is implemented.
-
-## Authorization
-
-Authorization must always be enforced server-side.
-
-The system must never rely on:
-
-- hidden frontend buttons
-- client-side role values
-- route visibility
-- browser state
-
-to provide actual security.
-
-## Least Privilege
-
-Users, services, database connections, and infrastructure should receive only the permissions they need.
-
-The application should avoid:
-
-- unnecessary database privileges
-- unnecessary administrative permissions
-- shared credentials
-- broad service access
-
-## Multi-Tenancy Security
-
-Multi-tenancy is implemented in a later phase.
-
-When implemented, every tenant-scoped operation must enforce tenant isolation server-side.
-
-A client must never be able to select another tenant simply by changing an identifier in a request.
-
-## Object-Level Authorization
-
-Every protected resource must verify that the authenticated user is authorized to access that specific resource.
-
-Do not assume that knowing a resource ID grants access.
-
-## ID Enumeration
-
-Resource identifiers should not be treated as authorization mechanisms.
-
-Authorization must be checked independently of the identifier format.
-
-## Session Security
-
-When sessions are implemented, they should consider:
-
-- secure cookies
-- HttpOnly
-- SameSite
-- expiration
-- session invalidation
-- session rotation
-- CSRF protection where applicable
-
-The exact session architecture will be defined during authentication implementation.
-
-## CSRF
-
-Cross-site request protections must be applied where the authentication architecture requires them.
-
-The exact mechanism will be selected when authentication is implemented.
-
-Do not add speculative CSRF infrastructure before the authentication model exists.
-
-## CORS
-
-CORS must be explicitly configured.
-
-The API should allow only the origins required by the application.
-
-Avoid wildcard origins for authenticated production APIs unless there is a documented security reason.
-
-Current local development allows the Next.js development origin:
-
-```text
-http://localhost:3000
-```
-
-Production CORS configuration will be defined later.
-
-## Secrets
-
-Secrets must never be committed to Git.
-
-Examples:
-
-- database passwords
-- API keys
-- signing keys
-- access tokens
-- webhook secrets
-- payment credentials
-
-Secrets must also not be placed in:
-
-- source code
-- screenshots
-- documentation
 - logs
 - API responses
+- database dumps intended for developers
+- audit records
+- error messages
 
-## Environment Files
+Password verification failures should return safe responses.
 
-`.env.example` may contain safe placeholder values.
+---
 
-Real `.env` files containing secrets must remain outside source control.
+# Password Reset Security
 
-## Error Security
+Password reset flows must use:
 
-Client-facing errors must not expose:
+- high-entropy random tokens
+- short expiration
+- single-use behavior
+- safe storage
+- rate limiting
+- generic request responses where appropriate
 
-- stack traces
-- SQL statements
-- database credentials
-- internal filesystem paths
-- infrastructure details
-- secret values
+Password-reset tokens must not be logged.
 
-Unexpected server errors should return a safe generic response.
+---
 
-## Logging Security
+# OAuth Security
 
-Logs must not contain secrets or unnecessary sensitive personal information.
+OAuth is an external authentication mechanism, not the application's authorization system.
 
-Security-relevant events may be logged using safe identifiers.
+The application remains authoritative for:
+
+- local users
+- account status
+- application sessions
+- roles
+- memberships
+- authorization
+
+OAuth implementation must use:
+
+```text id="n4o5p6"
+authorization code flow
+PKCE S256
+state
+OIDC nonce
+OIDC validation
+JWK signature verification
+```
+
+---
+
+# OAuth State
+
+OAuth state protects the authorization transaction.
+
+State must be:
+
+- cryptographically random
+- associated with the authorization attempt
+- short-lived
+- integrity protected
+- validated on callback
+
+A missing, invalid, expired, or mismatched state must terminate the authentication attempt.
+
+---
+
+# OAuth Nonce
+
+The OIDC nonce binds the authorization request to the returned ID token.
+
+The application must:
+
+1. generate a cryptographically secure nonce
+2. send it in the authorization request
+3. associate it with the temporary transaction
+4. validate the nonce returned in the ID token
+
+A nonce mismatch must fail authentication.
+
+---
+
+# OAuth PKCE
+
+PKCE is used with S256.
+
+The server creates a random verifier and derives the challenge.
+
+The verifier must remain protected until code exchange.
+
+The verifier must not be logged or unnecessarily exposed to client-side JavaScript.
+
+---
+
+# OAuth Transaction Protection
+
+The current implementation stores temporary OAuth transaction information in an encrypted browser cookie.
+
+The transaction is short-lived and contains values such as:
+
+```text id="q7r8s9"
+provider
+state
+nonce
+PKCE verifier
+creation time
+```
+
+The transaction cookie uses:
+
+```text id="t0u1v2"
+HttpOnly
+SameSite=Lax
+Secure in production
+Path=/
+```
+
+The encryption key remains server-side.
+
+The OAuth transaction is not an authenticated session.
+
+---
+
+# OIDC Token Validation
+
+An ID token must never be trusted merely because it came from the provider callback.
+
+The server validates:
+
+```text id="w3x4y5"
+signature
+issuer
+audience
+subject
+nonce
+expiration
+issued-at time
+not-before where applicable
+authorized party when applicable
+```
+
+The accepted signing algorithm must be restricted to the provider's expected algorithm.
+
+Google and Apple provider keys are validated using provider JWKs.
+
+---
+
+# JWK Security
+
+Provider signing keys must come from trusted provider JWK endpoints.
+
+The application must not accept arbitrary verification keys from the client.
+
+Key selection must use the provider key identifier where appropriate.
+
+Provider key rotation must be supported without weakening signature verification requirements.
+
+---
+
+# OAuth Identity Security
+
+The authoritative external identity is:
+
+```text id="z6a7b8"
+provider + provider_subject
+```
+
+Email alone must not identify the external account.
+
+This protects account association from unsafe email-based automatic merging.
+
+---
+
+# Account Linking Security
+
+Account linking is privileged.
+
+A user must already be authenticated to initiate an account-linking operation.
+
+The linking flow must:
+
+- authenticate the current user
+- validate the provider transaction
+- validate the provider identity
+- verify the external identity is not already owned by another user
+- attach the identity only to the authorized local user
+
+An OAuth identity belonging to another account must not be silently transferred.
+
+---
+
+# Account Merge Protection
+
+The application must not automatically merge accounts solely because:
+
+```text id="c8d9e0"
+OAuth email == local email
+```
+
+Email equality alone is not sufficient proof of account ownership.
+
+Account merging, if ever introduced, requires a dedicated security design.
+
+---
+
+# Session Security
+
+After successful authentication, the application creates its own session.
+
+OAuth and password login must use the same application session architecture.
+
+Sessions must support:
+
+- expiration
+- revocation
+- logout
+- account disablement
+- security-driven invalidation
+
+Session identifiers must be generated using cryptographically secure randomness.
+
+---
+
+# Session Cookies
+
+Where cookie-based authentication is used, production cookies should use:
+
+```text id="f1g2h3"
+HttpOnly
+Secure
+appropriate SameSite policy
+restricted path/domain
+```
+
+Session cookies must not expose secrets to JavaScript unnecessarily.
+
+---
+
+# Session Revocation
+
+A session may be revoked because of:
+
+- logout
+- password security event
+- account disablement
+- suspected compromise
+- administrative action
+
+Revoked sessions must no longer authorize protected requests.
+
+---
+
+# Authorization
+
+Authorization must occur after authentication.
+
+The backend must determine:
+
+```text id="i4j5k6"
+Who is the user?
+What roles do they have?
+What tenant or business do they belong to?
+What resource are they accessing?
+Are they allowed to perform this action?
+```
+
+Never trust role values supplied by the client.
+
+---
+
+# Role-Based Access Control
+
+The application roles include:
+
+```text id="l7m8n9"
+CUSTOMER
+BUSINESS_OWNER
+BUSINESS_ADMIN
+MANAGER
+STAFF
+PLATFORM_ADMIN
+PLATFORM_OPERATOR
+```
+
+Role definitions belong to the application authorization layer.
+
+Authentication providers must never assign application roles directly.
+
+---
+
+# Object-Level Authorization
+
+Every resource access must be authorized for the current principal.
+
+Example:
+
+```text id="o0p1q2"
+GET /api/v1/bookings/{id}
+```
+
+does not mean:
+
+```text id="r3s4t5"
+valid ID = valid access
+```
+
+The server must verify ownership or authorized membership.
+
+---
+
+# Tenant Isolation
+
+Tenant isolation is a critical security boundary.
+
+The system must prevent:
+
+```text id="u6v7w8"
+Business A
+    ↓
+accessing
+Business B data
+```
+
+Tenant context must be derived from trusted server-side authentication and authorization state.
+
+A client-supplied tenant ID is never sufficient authorization.
+
+---
+
+# Cross-Tenant Access Protection
+
+Tenant-scoped database queries must use trusted tenant context.
+
+The service should ensure that:
+
+```text id="x9y0z1"
+authenticated user
+   ↓
+authorized membership
+   ↓
+trusted tenant
+   ↓
+tenant-scoped repository query
+```
+
+Object-level checks remain necessary even after tenant membership is established.
+
+---
+
+# ID Enumeration Protection
+
+Predictable identifiers must not automatically grant access to records.
+
+Authorization must protect against insecure direct object reference attacks.
+
+Returning `404` for unauthorized resources may be appropriate where it reduces information disclosure.
+
+---
+
+# CSRF
+
+Cookie-based authenticated operations require CSRF protection.
+
+OAuth `state` protects the OAuth authorization flow specifically.
+
+It does not replace general application CSRF protection.
+
+State-changing APIs must follow the application's CSRF strategy once browser authentication is fully integrated.
+
+---
+
+# CORS
+
+Authenticated cross-origin requests must use a controlled allowlist.
+
+Production should not broadly allow arbitrary origins.
+
+Development may explicitly allow known local development origins.
+
+---
+
+# Secrets Management
+
+Secrets must never be committed to source control.
 
 Examples include:
 
-- authentication failure
-- authorization failure
-- suspicious access patterns
-- administrative actions
+```text id="a2b3c4"
+database passwords
+OAuth client secrets
+Apple private keys
+OAuth transaction encryption keys
+payment credentials
+email credentials
+API keys
+signing keys
+```
 
-## Rate Limiting
+Secrets must be provided through secure runtime configuration.
 
-Rate limiting will be introduced where required to protect:
+---
 
-- authentication endpoints
-- sensitive operations
-- public APIs
-- resource-intensive endpoints
-- abuse-prone functionality
+# Server-Only Configuration
 
-The exact implementation will be selected based on the relevant feature requirements.
+Server-only secrets must remain in the Go/backend runtime.
 
-## Brute Force Protection
+They must never be included in browser bundles.
 
-Authentication features must include appropriate protection against repeated credential attacks.
+Frontend-exposed environment variables must contain only values explicitly intended for client exposure.
 
-The exact controls will be defined during the authentication phase.
+---
 
-## File Upload Security
+# OAuth Secrets
 
-Future file-upload functionality must consider:
+OAuth credentials must remain server-side.
 
-- file type validation
-- file size limits
-- content validation
-- storage isolation
-- filename handling
-- malware scanning where appropriate
-- unauthorized file access
+Never expose:
 
-File uploads are not implemented in the current phase.
+- Google client secret
+- Apple private key
+- Apple signing credentials
+- generated Apple client secret
+- OAuth transaction key
 
-## Webhook Security
+to the frontend.
 
-Future webhooks must verify authenticity before processing.
+---
 
-Possible mechanisms include:
+# Logging Security
 
-- signatures
-- shared secrets
-- replay protection
-- timestamp validation
-- idempotency
+Logs must support debugging without leaking secrets.
 
-Webhook functionality is not implemented in the current phase.
+Never log:
 
-## Payment Security
+```text id="d5e6f7"
+passwords
+password hashes
+session tokens
+OAuth authorization codes
+OAuth state
+OAuth nonce
+PKCE verifier
+ID tokens
+access tokens
+refresh tokens
+client secrets
+private keys
+payment card data
+```
 
-Payment functionality is intentionally deferred.
+Structured logs should include safe contextual information such as:
 
-When implemented:
+```text id="g8h9i0"
+request_id
+user_id when appropriate
+tenant_id when appropriate
+event type
+timestamp
+result
+```
 
-- sensitive payment credentials must not be stored unnecessarily
-- payment-provider security requirements must be followed
-- server-side payment verification is required
-- financial state changes must be protected against duplicate processing
-- webhook authenticity must be verified
+Sensitive identifiers should be minimized according to the event.
 
-## Dependency Security
+---
 
-Dependencies should be:
+# Error Security
 
-- intentionally selected
-- kept reasonably current
-- reviewed for security issues
-- removed when no longer needed
+Production errors must not expose:
 
-Do not add dependencies solely for hypothetical future requirements.
+- stack traces
+- SQL queries
+- database schema details
+- provider credentials
+- internal filesystem paths
+- secret values
+- implementation details unnecessary for clients
 
-## Database Security
+Internal diagnostic information belongs in controlled server-side logs.
 
-Database access must:
+---
 
-- use controlled credentials
-- use least privilege where practical
-- use parameterized queries
-- protect connection credentials
-- avoid exposing database ports publicly in production
+# Rate Limiting
 
-The current PostgreSQL port exposure is for local development only.
+Rate limiting should protect abuse-prone operations.
 
-## Data Protection
+Priority targets include:
 
-Collect only data required by the product.
+- login
+- registration
+- password reset
+- OAuth start
+- OAuth callback
+- account linking
+- public booking
+- webhook processing
+- message sending where abuse is possible
+- expensive search operations
 
-Sensitive data should not be retained indefinitely without a legitimate purpose.
+A first implementation may use application-level controls.
 
-Future data-retention rules must consider:
+Shared infrastructure such as Redis can be introduced when scale justifies it.
 
-- privacy
-- legal requirements
-- operational needs
-- customer expectations
+---
 
-## Audit Logging
+# Brute-Force Protection
 
-Important security-sensitive and administrative actions should eventually be auditable.
+Authentication endpoints should eventually support defenses against:
 
-Potential examples:
+- brute-force password attacks
+- credential stuffing
+- automated account creation
+- OAuth abuse
+- password-reset abuse
 
-- permission changes
-- account security changes
-- business configuration changes
-- financial actions
-- administrative actions
+Responses should avoid helping attackers determine whether an account exists.
 
-Audit logging will be designed before the relevant features are implemented.
+---
 
-## Security Headers
+# File Upload Security
 
-The web application should eventually use appropriate security-related HTTP headers.
+Uploaded files are untrusted.
 
-The exact header set will be established when deployment and production security are implemented.
+The platform must validate:
 
-## Content Security
+- size
+- MIME type
+- file signature where necessary
+- extension
+- destination
+- tenant ownership
+- authorization
 
-The application should minimize unsafe script execution and avoid unnecessary third-party script dependencies.
+Files must be stored outside executable application paths.
 
-Any external scripts must have a clear business and security reason.
+---
 
-## Dependency and Supply-Chain Risk
+# Webhook Security
 
-Third-party packages should be evaluated before adoption.
+Webhooks are untrusted until authenticated.
 
-Avoid:
+Webhook processing must verify provider signatures and use replay/idempotency controls where available.
 
-- abandoned dependencies
-- unnecessary packages
-- packages with excessive privileges
-- duplicating functionality already provided by the platform
+A webhook must not modify sensitive state before signature verification.
 
-## Secure Defaults
+---
 
-New features should default to the more secure behavior.
+# Payment Security
+
+The application must never store raw card information.
+
+Payment providers should handle sensitive card data.
+
+The platform should store provider references and verified state only.
+
+Payment webhook authenticity is mandatory.
+
+---
+
+# Dependency Security
+
+Dependencies must be monitored for:
+
+- known vulnerabilities
+- malicious package changes
+- abandoned critical libraries
+- unnecessary dependencies
+
+Adding a dependency should have a clear purpose.
+
+The Go module and frontend package lockfiles must remain committed and reviewable.
+
+---
+
+# Supply Chain Security
+
+Generated code and external packages must be treated as potentially influential inputs.
+
+The project should prefer:
+
+- trusted package sources
+- pinned or reproducible dependency versions
+- dependency review
+- minimal dependencies
+- regular security updates
+
+---
+
+# Database Security
+
+Database access must use least privilege.
+
+The application database user should receive only the permissions required by the application.
+
+Administrative credentials must not be embedded in application code.
+
+Production database access should be restricted by network and identity controls.
+
+---
+
+# Data Protection
+
+Sensitive customer and business data should be minimized.
+
+The application must avoid collecting information that is not necessary for a product feature.
+
+Future production deployment should provide appropriate encryption at rest, transport encryption, backup protection, and access controls.
+
+---
+
+# HTTPS
+
+Production traffic must use HTTPS.
+
+Sensitive authentication and application traffic must never rely on plaintext HTTP in production.
+
+Secure cookies must be used with HTTPS.
+
+---
+
+# Security Headers
+
+Production frontend and API deployment should use appropriate security headers.
+
+Expected controls may include:
+
+```text id="j1k2l3"
+Content-Security-Policy
+Strict-Transport-Security
+X-Content-Type-Options
+Referrer-Policy
+Frame-related protections
+```
+
+Exact policies will be finalized during production security hardening.
+
+---
+
+# Content Security
+
+User-generated content must be safely rendered.
+
+The platform must defend against:
+
+- XSS
+- HTML injection
+- unsafe URL handling
+- script injection
+
+User content should be escaped or sanitized according to the rendering context.
+
+Never assume database-stored content is safe merely because it came through the application.
+
+---
+
+# Authentication Audit Events
+
+Security-relevant events should be auditable.
 
 Examples:
 
-- deny access unless explicitly allowed
-- private by default
-- validation enabled
-- sensitive information excluded from logs
-- secure configuration required
-
-## Security Testing
-
-Security testing will eventually include:
-
-- input validation testing
-- authorization testing
-- authentication testing
-- API abuse testing
-- dependency checks
-- penetration-oriented testing
-- OWASP-focused review
-
-The exact testing strategy will expand as the product becomes more capable.
-
-## Incident and Emergency Controls
-
-Future production architecture should provide mechanisms for:
-
-- disabling dangerous functionality
-- restricting access
-- revoking credentials
-- responding to security incidents
-- recovering from compromised components
-
-These capabilities are intentionally deferred until the relevant infrastructure phases.
-
-## Security Documentation
-
-Important security decisions must be documented in:
-
-```text
-docs/DECISIONS.md
+```text id="m4n5o6"
+login_success
+login_failure
+oauth_login
+oauth_link
+oauth_unlink
+logout
+session_revoked
+password_changed
+password_reset_completed
+account_disabled
+role_changed
 ```
 
-Security-sensitive features should document their assumptions and boundaries.
+Audit records must never contain credentials or authentication secrets.
 
-## Phase 1 Boundary
+---
 
-This phase defines the security baseline only.
+# Security Testing
 
-It does not implement:
+Security testing should include:
+
+```text id="p7q8r9"
+authentication tests
+authorization tests
+tenant-isolation tests
+session tests
+OAuth validation tests
+input-validation tests
+SQL-injection tests
+CSRF tests
+rate-limit tests
+file-upload tests
+webhook tests
+dependency checks
+```
+
+Security tests should include both accepted and rejected cases.
+
+---
+
+# OAuth Security Tests
+
+OAuth tests should verify rejection of:
+
+```text id="s0t1u2"
+incorrect state
+missing state
+expired transaction
+tampered transaction
+incorrect nonce
+missing nonce
+invalid PKCE verifier
+invalid authorization code
+invalid issuer
+invalid audience
+invalid subject
+expired ID token
+not-yet-valid ID token
+invalid signature
+unexpected signing algorithm
+unknown provider
+identity already belonging to another user
+```
+
+The existing OAuth foundation includes dedicated tests for these categories.
+
+---
+
+# Security Headers and Cookies Testing
+
+Browser-facing authentication flows must verify:
+
+- HttpOnly
+- Secure in production
+- SameSite behavior
+- path/domain scope
+- appropriate CORS behavior
+- CSRF protections
+
+These controls should be tested through integration/browser tests once the authentication UI is integrated.
+
+---
+
+# Observability Security
+
+Observability systems must not become a secret-leak mechanism.
+
+Tracing, metrics, error reporting, and logs must use redaction rules.
+
+Sensitive request fields must not automatically be captured.
+
+---
+
+# Security Incident Handling
+
+Production security incidents should have a documented response process.
+
+The process should include:
+
+```text id="v3w4x5"
+identify
+contain
+investigate
+recover
+rotate credentials
+restore affected services
+document
+prevent recurrence
+```
+
+Compromised authentication or integration credentials should be rotated immediately.
+
+---
+
+# Emergency Access
+
+Administrative access must be limited and auditable.
+
+Emergency privileges should not become a normal mechanism for application operations.
+
+Platform administrator access requires stronger protection than ordinary customer or business access.
+
+---
+
+# Security and Development Workflow
+
+Security controls must be implemented during normal development rather than postponed entirely to the final phase.
+
+Each phase should consider:
+
+```text id="y6z7a8"
+authentication
+authorization
+tenant isolation
+input validation
+secrets
+logging
+error handling
+abuse
+data exposure
+```
+
+---
+
+# OWASP ASVS Target
+
+The security baseline is:
+
+```text id="b9c0d1"
+OWASP ASVS Level 2
+```
+
+Selective Level 3 controls may be applied to especially sensitive systems such as:
 
 - authentication
-- authorization
-- RBAC
-- multi-tenancy security
-- production secrets management
-- WAF
-- advanced rate limiting
-- production security headers
-- penetration testing infrastructure
-- centralized security monitoring
+- session management
+- payment flows
+- administrative capabilities
+- tenant isolation
 
-Those capabilities will be implemented in their authorized phases.
+The project must not claim formal ASVS compliance until a dedicated verification process has actually been completed.
 
-## Core Principle
+---
 
-Security must be built into the architecture from the beginning.
+# Phase 13 Security Hardening
 
-A feature is not considered complete merely because it works functionally.
+Phase 13 is responsible for systematic security hardening and verification.
 
-It must also be:
+Expected areas include:
 
-```text
-Validated
-Authorized
-Protected
-Tested
-Auditable where required
+```text id="e2f3g4"
+authentication
+authorization
+tenant isolation
+API security
+input validation
+session security
+OAuth
+payment security
+secrets
+dependency security
+logging
+abuse prevention
+security testing
 ```
+
+Phase 13 should verify controls introduced earlier rather than postponing all security engineering until then.
+
+---
+
+# Current Phase 3 Security Status
+
+Phase 3 security foundations currently include:
+
+- password-hashing architecture
+- application session architecture
+- OAuth state
+- OIDC nonce
+- PKCE S256
+- encrypted OAuth transaction
+- protected OAuth cookie
+- OIDC claim validation
+- JWK signature verification
+- provider-specific signing algorithm restrictions
+- OAuth identity uniqueness
+- no email-only account merge
+- server-side identity ownership
+
+Not yet complete:
+
+- complete application session integration
+- authentication middleware
+- production OAuth configuration
+- complete frontend authentication flow
+- complete RBAC enforcement
+- full security hardening
+
+---
+
+# Security Architecture Boundaries
+
+Security architecture must not be confused with product authorization architecture.
+
+Security establishes the controls.
+
+Authentication establishes identity.
+
+Authorization determines permissions.
+
+Database constraints protect durable integrity.
+
+The booking engine remains authoritative for booking correctness.
+
+Payment providers remain authoritative for their externally verified payment events.
+
+---
+
+# Core Principle
+
+The platform must assume that attackers can control:
+
+```text id="h5i6j7"
+the browser
+request bodies
+query parameters
+path parameters
+headers
+object IDs
+tenant IDs
+OAuth callback parameters
+uploaded files
+webhook payloads
+```
+
+Security therefore depends on:
+
+```text id="k8l9m0"
+validated input
+authenticated identity
+server-side authorization
+database constraints
+secure session handling
+tenant isolation
+minimal sensitive data
+layered defenses
+```
+
+No single security control is sufficient on its own.

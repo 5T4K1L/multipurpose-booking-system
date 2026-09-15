@@ -440,3 +440,5 @@ Explicit interfaces
 ```
 
 over excessive abstraction.
+
+Only update if it documents the internal/auth package boundaries. Otherwise leave it unchanged.

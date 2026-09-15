@@ -10,257 +10,670 @@ Authorization determines what an authenticated user is allowed to do.
 
 These responsibilities must remain separate.
 
-## Authentication Flow
+---
 
-The intended flow is:
+# Authentication Model
+
+The platform supports multiple authentication mechanisms that resolve to one local platform identity:
 
 ```text
-User
-   ↓
-Login credentials
-   ↓
-Credential verification
-   ↓
-Authenticated identity
-   ↓
-Session
-   ↓
-Authenticated request
+Password
+Google OAuth / OIDC
+Apple Sign in with Apple
+        ↓
+Local User Account
+        ↓
+Application Session
+        ↓
+Authorization / RBAC
 ```
 
-## Identity
+External identity providers authenticate an external account.
 
-The `users` table represents the platform identity.
+The application remains authoritative for:
 
-Authentication data must not be mixed unnecessarily into unrelated business entities.
+- local users
+- account linking
+- application sessions
+- authorization
+- roles
+- tenant membership
 
-A user may eventually participate in multiple product contexts, but authentication establishes the underlying platform identity first.
+An external provider does not become the application's authorization authority.
 
-## Authentication Responsibilities
+---
+
+# Local User Identity
+
+The `users` table represents the platform's local identity.
+
+Authentication mechanisms attach to this identity rather than replacing it.
+
+Conceptually:
+
+```text
+users
+├── user_credentials
+├── user_oauth_identities
+└── user_sessions
+```
+
+The local user remains the application-level identity regardless of whether authentication occurs through a password, Google, or Apple.
+
+---
+
+# Authentication Responsibilities
 
 Authentication is responsible for:
 
 - establishing identity
-- verifying credentials
-- creating authenticated sessions
-- maintaining session state
-- ending sessions
-- credential recovery
-- credential changes
+- verifying authentication credentials
+- resolving external authentication identities
+- creating authenticated application state
+- maintaining authenticated session state
+- ending authenticated sessions
 - protecting authentication endpoints
+- applying authentication-specific security controls
 
 Authentication is not responsible for:
 
+- tenant permissions
 - business permissions
-- tenant access
 - staff permissions
-- customer/business roles
 - booking authorization
+- resource authorization
+- customer/business access rules
 
 Those belong to authorization and application-level access control.
 
-## Password Authentication
+---
 
-The platform will support password-based authentication unless a later architectural decision changes this.
+# Password Authentication
+
+The platform supports password-based authentication.
 
 Passwords must never be stored in plaintext.
 
 Only a secure password hash may be persisted.
 
-The exact password-hashing algorithm and configuration will be selected during implementation.
+The current implementation uses Argon2id with a unique randomly generated salt per password.
 
-## Password Requirements
+The password hash is stored separately from the `users` table in:
 
-Password policy must balance security and usability.
+```text
+user_credentials
+```
 
-The implementation should prioritize:
+---
 
-- sufficiently long passwords
-- secure password hashing
-- resistance to brute-force attacks
-- protection against credential stuffing
-- no unnecessary arbitrary complexity rules
+# Password Authentication Flow
 
-The exact password policy will be defined before password registration is implemented.
+The intended password authentication flow is:
 
-## Password Hashing
-
-Password hashing must use a modern password-hashing algorithm designed specifically for passwords.
-
-The implementation must:
-
-- use a unique salt per password
-- use an appropriate work factor
-- make verification resistant to brute-force attacks
-- support future work-factor upgrades
-
-Raw passwords must never be logged or returned by the API.
-
-## Login
-
-A login operation should:
-
-1. validate the request
-2. locate the identity
-3. verify the password hash
-4. apply authentication-abuse protections
-5. create an authenticated session
-6. return the appropriate authenticated state
+```text
+Client
+   ↓
+Login request
+   ↓
+Validate request
+   ↓
+Locate local user
+   ↓
+Load password credential
+   ↓
+Verify Argon2id password hash
+   ↓
+Authentication service
+   ↓
+Application session
+```
 
 Authentication failures should not unnecessarily reveal whether an account exists.
 
-## Account Enumeration
+Password hashes must never be exposed through the API.
 
-Authentication responses should avoid exposing whether a specific email address is registered when doing so would enable account enumeration.
+---
 
-Where appropriate, externally visible responses should remain generic.
+# OAuth / OIDC Authentication
 
-## Session Strategy
+The platform supports:
 
-The application will use server-controlled authenticated sessions.
+- Google OAuth/OIDC
+- Apple Sign in with Apple
 
-The session mechanism should prioritize:
+OAuth uses the standard authorization-code flow with OpenID Connect identity validation.
 
-- secure storage
-- revocation
-- expiration
-- rotation where appropriate
-- protection against theft
-- minimal client exposure
+The application does not treat a provider access token as its own authentication session.
 
-The exact implementation will be finalized during the authentication implementation step.
+The external provider authenticates the external identity.
 
-## Browser Session Storage
+The local application then resolves that external identity to its own user model.
 
-For browser authentication, sensitive session credentials should not be exposed unnecessarily to JavaScript.
+---
 
-The preferred browser security model is a secure cookie-based session.
+# OAuth Identity Model
 
-Session cookies should consider:
+OAuth identities are stored in a dedicated table:
+
+```text
+user_oauth_identities
+```
+
+Each identity contains the conceptual values:
+
+```text
+id
+user_id
+provider
+provider_subject
+created_at
+updated_at
+```
+
+The external identity is identified by:
+
+```text
+provider + provider_subject
+```
+
+The provider subject is the stable external account identifier.
+
+Email is supplementary account information.
+
+Email must not be used as the permanent external identity key.
+
+This is particularly important for Apple because Apple may provide private relay email addresses.
+
+---
+
+# OAuth Provider Identity Rules
+
+Supported providers are initially:
+
+```text
+google
+apple
+```
+
+The database enforces:
+
+```text
+UNIQUE(provider, provider_subject)
+```
+
+This ensures that the same external provider identity cannot be attached to multiple local users.
+
+The initial model also enforces:
+
+```text
+UNIQUE(user_id, provider)
+```
+
+This limits each local user to one Google identity and one Apple identity.
+
+A future requirement for multiple identities per provider would require an explicit architectural decision.
+
+---
+
+# OAuth Authorization Flow
+
+The OAuth flow is:
+
+```text
+Client
+   ↓
+OAuth start endpoint
+   ↓
+Generate state
+   ↓
+Generate nonce
+   ↓
+Generate PKCE verifier
+   ↓
+Build authorization request
+   ↓
+Create encrypted OAuth transaction
+   ↓
+Store transaction in protected cookie
+   ↓
+Redirect to provider
+   ↓
+Provider authentication
+   ↓
+OAuth callback
+   ↓
+Read OAuth transaction
+   ↓
+Validate transaction
+   ↓
+Validate state
+   ↓
+Exchange authorization code
+   ↓
+Validate ID token signature
+   ↓
+Validate OIDC claims
+   ↓
+Normalize external identity
+   ↓
+Authentication service
+   ↓
+Local user
+   ↓
+Application session
+```
+
+No part of the browser-supplied OAuth response is trusted without server-side validation.
+
+---
+
+# OAuth State
+
+The OAuth state value protects the authorization flow against forged callbacks and cross-request confusion.
+
+State must be:
+
+- generated using a cryptographically secure random source
+- associated with the original authorization attempt
+- short-lived
+- validated during the callback
+- protected against tampering
+
+A callback with missing, incorrect, expired, or otherwise invalid state must fail safely.
+
+---
+
+# OAuth Nonce
+
+OIDC nonce protects the relationship between the authorization request and the returned identity token.
+
+Nonce must be:
+
+- generated using a cryptographically secure random source
+- associated with the OAuth transaction
+- sent with the provider authorization request
+- validated against the returned ID token
+
+A missing or incorrect nonce must cause authentication to fail.
+
+---
+
+# PKCE
+
+The authorization-code flow uses PKCE with the S256 challenge method.
+
+The flow is:
+
+```text
+Generate verifier
+     ↓
+Create S256 challenge
+     ↓
+Send challenge to provider
+     ↓
+Retain verifier server-side
+     ↓
+Receive authorization code
+     ↓
+Exchange code using verifier
+```
+
+The PKCE verifier must not be exposed unnecessarily to the browser or logged.
+
+---
+
+# OAuth Transaction
+
+A short-lived OAuth transaction binds the authorization request to the callback.
+
+The transaction contains:
+
+```text
+provider
+state
+nonce
+PKCE verifier
+creation time
+```
+
+The transaction is encrypted before being stored in the browser.
+
+The transaction is:
+
+- integrity protected
+- confidentiality protected
+- short-lived
+- provider-bound
+- validated during the callback
+
+The transaction does not represent an authenticated application session.
+
+---
+
+# OAuth Browser Cookie
+
+The temporary OAuth transaction is stored in a protected browser cookie.
+
+The cookie uses:
 
 ```text
 HttpOnly
-Secure
-SameSite
-appropriate expiration
+SameSite=Lax
+Secure=true in production
+Path=/
 ```
 
-The exact settings depend on the deployment architecture.
+The transaction cookie does not contain a local authenticated user identity.
 
-## Session Lifetime
+The OAuth transaction key remains server-side.
 
-Sessions should have controlled lifetimes.
+---
 
-The implementation should distinguish where necessary between:
+# OAuth Authorization Endpoints
 
-- normal session lifetime
-- inactivity expiration
-- explicit logout
-- security-triggered invalidation
+Authentication OAuth endpoints are under:
 
-Long-lived sessions should not be created without a clear reason.
+```text
+/api/v1/auth
+```
 
-## Session Revocation
+The planned provider endpoints are:
 
-The server must be able to invalidate authenticated sessions.
+```text
+GET /api/v1/auth/google
+GET /api/v1/auth/google/callback
 
-Revocation may be required when:
+GET /api/v1/auth/apple
+GET /api/v1/auth/apple/callback
+```
 
-- the user logs out
-- credentials are changed
-- a security event occurs
-- an administrator disables access
-- suspicious activity is detected
+The start endpoint creates the authorization transaction and redirects to the provider.
 
-## Logout
+The callback validates the transaction and provider response before handing the trusted external identity to the authentication service.
 
-Logout must invalidate the authenticated session server-side where applicable.
+---
 
-Simply deleting a browser cookie is insufficient if the server still considers the session valid.
+# Google Authentication
 
-## Credential Changes
+Google authentication uses:
 
-Changing a password should require appropriate verification of the current authenticated identity.
+```text
+Google OAuth 2.0
+OpenID Connect
+Authorization Code
+PKCE
+ID Token
+Google JWKs
+```
 
-Credential changes may invalidate existing sessions depending on the security policy.
+The Google flow validates:
 
-The exact behavior will be implemented with the password lifecycle.
+- token signature
+- expected signing algorithm
+- issuer
+- audience
+- authorized party where required
+- nonce
+- issued-at time
+- expiration
+- not-before where applicable
+- provider subject
 
-## Password Reset
+The Google provider subject is the stable identity key.
 
-Password reset must use a secure recovery flow.
+Google email may be retained as account information but is not the permanent external identity key.
 
-The system should:
+---
 
-- use single-use reset tokens
-- limit token lifetime
-- invalidate tokens after use
-- avoid exposing account existence unnecessarily
-- avoid logging reset secrets
+# Apple Authentication
 
-Reset tokens must never be stored or transmitted insecurely.
+Apple authentication uses:
 
-## Email Verification
+```text
+Sign in with Apple
+OpenID Connect
+Authorization Code
+PKCE
+ID Token
+Apple JWKs
+```
 
-Email verification may be required for certain product capabilities.
+The Apple flow validates:
 
-If implemented, verification should use:
+- token signature
+- expected ES256 signing algorithm
+- issuer
+- audience
+- authorized party where required
+- nonce
+- issued-at time
+- expiration
+- not-before where applicable
+- provider subject
 
-- time-limited tokens
-- single-use verification
-- safe token storage
-- clear verification state
+The Apple provider subject is the stable identity key.
 
-Email verification is distinct from authentication itself.
+Apple email may be a private relay address and must not be treated as the permanent external account identifier.
 
-## Brute-Force Protection
+---
 
-Authentication endpoints must be protected against repeated automated attempts.
+# Apple Client Secret
 
-Controls may include:
+Apple requires a server-generated client secret for the token exchange.
 
-- rate limiting
-- temporary throttling
-- progressive delays
-- suspicious-activity detection
-- credential-stuffing defenses
+The application generates this secret using:
 
-The exact implementation will be selected when authentication endpoints are created.
+```text
+Apple Team ID
+Apple Key ID
+Apple Client ID
+Apple private key
+```
 
-## Authentication Logging
+The signing algorithm is:
 
-Security-relevant authentication events should be logged appropriately.
+```text
+ES256
+```
 
-Examples:
+The client secret contains the appropriate issuer, subject, audience, issued-at time, and expiration claims.
 
-- successful login
-- failed login
-- logout
-- password change
-- password-reset request
-- password-reset completion
-- session invalidation
+The Apple private key must remain server-side.
 
-Logs must not contain:
+The private key must never be:
 
-- passwords
-- session secrets
-- reset tokens
-- authentication headers
-- sensitive credential material
+- sent to the frontend
+- returned by an API
+- committed to Git
+- included in documentation
+- written to logs
 
-## Authentication Errors
+Real Apple credentials are runtime configuration and require manual developer-console setup.
 
-Client-facing authentication errors should be safe and consistent.
+---
 
-Do not expose:
+# OIDC ID Token Validation
 
-- password-hash details
-- database errors
-- internal stack traces
-- implementation details
+A returned ID token must not be trusted merely because the provider returned it.
 
-## Authorization Boundary
+The server validates the cryptographic signature against the provider's JWK set.
+
+The server must then validate the appropriate claims.
+
+Required validation includes:
+
+```text
+signature
+issuer
+audience
+authorized party when applicable
+nonce
+issued-at time
+expiration
+not-before when applicable
+subject
+```
+
+Provider signing algorithms are restricted to the algorithms expected by that provider.
+
+Google uses its expected RSA signing configuration.
+
+Apple uses its expected ES256 signing configuration.
+
+---
+
+# JWK Verification
+
+Provider signing keys are obtained from the provider's JWK endpoint.
+
+The JWK key identifier is used to select the appropriate signing key.
+
+The application must not accept an arbitrary signing key supplied by the client.
+
+The signature must be verified before the claims are treated as trusted authentication information.
+
+Production implementation must account for provider signing-key rotation and appropriate key caching behavior.
+
+---
+
+# OAuth Identity Normalization
+
+After successful OIDC validation, provider-specific claims are normalized into the application identity model:
+
+```text
+OAuthIdentity
+├── Provider
+├── ProviderSubject
+├── Email
+├── EmailVerified
+└── DisplayName
+```
+
+The `ProviderSubject` is the authoritative external identity value.
+
+The normalized identity is then passed to the authentication service.
+
+---
+
+# Account Linking
+
+Account linking is separate from first-time authentication.
+
+The safe linking flow is:
+
+```text
+Authenticated local user
+        ↓
+Explicit link action
+        ↓
+Provider authorization
+        ↓
+Provider identity validation
+        ↓
+Check identity ownership
+        ↓
+Attach external identity
+```
+
+The system must not automatically merge accounts solely because:
+
+```text
+OAuth email == local user email
+```
+
+Email matching alone is insufficient authorization to take control of or merge an existing account.
+
+A provider identity already belonging to another local user must not be attached to the current user.
+
+An unauthenticated request must not attach an OAuth identity to an existing account.
+
+---
+
+# New OAuth Account
+
+A first-time OAuth identity may eventually create a local user through the authentication service.
+
+The conceptual flow is:
+
+```text
+Validated external identity
+        ↓
+Search user_oauth_identities
+        ↓
+Identity exists?
+   ├── Yes → existing local user
+   └── No  → controlled account-creation/linking flow
+```
+
+Local user creation must happen through the authentication service.
+
+The OAuth provider must not directly create arbitrary users through repository calls.
+
+---
+
+# OAuth Provider Tokens
+
+The current authentication architecture does not persist provider access or refresh tokens.
+
+The provider's authentication response is used to establish or resolve the local authentication identity.
+
+Provider access to external APIs is a separate future requirement.
+
+If future product functionality needs provider API access, token storage and encryption must receive a separate security and architecture review.
+
+---
+
+# Application Session Integration
+
+All authentication mechanisms eventually use the same application session model.
+
+Conceptually:
+
+```text
+Password
+Google OAuth
+Apple OAuth
+        ↓
+Authentication Service
+        ↓
+Application Session
+```
+
+There must not be separate permanent session systems for password, Google, and Apple authentication.
+
+The application session is the authoritative authenticated state for protected application requests.
+
+---
+
+# Authentication Service Boundary
+
+The authentication service is responsible for combining authentication mechanisms with the local user model.
+
+It will eventually handle:
+
+- password authentication
+- OAuth identity resolution
+- new-user creation where appropriate
+- account linking
+- account status checks
+- authentication policy
+- application-session initiation
+
+It must not silently grant authorization or tenant access.
+
+---
+
+# Session Boundary
+
+Session creation and session lifecycle belong to the application session mechanism.
+
+A validated OAuth identity alone does not constitute a fully authenticated application session.
+
+The application must establish its own authenticated session after successful identity resolution.
+
+---
+
+# Authentication and Authorization Boundary
 
 Authentication answers:
 
@@ -271,173 +684,262 @@ Who is this user?
 Authorization answers:
 
 ```text
-What may this user do?
+What can this user do?
 ```
 
-Authentication must establish identity before authorization is evaluated.
+Authentication must establish the trusted identity context required by authorization.
 
-## Future RBAC
+Authorization remains a separate layer.
 
-Role-based access control is a separate concern.
+Business roles, tenant membership, staff permissions, customer permissions, and resource access must not be embedded in provider-specific OAuth logic.
 
-Authentication should provide a reliable identity context that later authorization logic can use.
+---
 
-Do not hardcode business roles into authentication code.
+# Account Status
 
-## Multi-Tenancy Boundary
+Authentication must verify that the local account is eligible to authenticate.
 
-Multi-tenancy is implemented in a later phase.
+A disabled local account must not establish a new authenticated application session.
 
-Authentication identifies the user.
+External provider authentication does not override local account status.
 
-Tenant membership and tenant access must be evaluated separately.
+---
 
-A valid login must never automatically grant access to every tenant or business.
+# Authentication Errors
 
-## User Deactivation
+Client-facing authentication errors should be safe and consistent.
 
-The system should support disabling authentication access for a user without necessarily deleting the user record.
+Do not expose:
 
-A disabled identity must not be able to establish new authenticated sessions.
+- provider access tokens
+- provider refresh tokens
+- ID tokens
+- authorization codes
+- client secrets
+- private keys
+- password hashes
+- database errors
+- internal stack traces
+- provider-specific sensitive internals
 
-Existing-session handling must be defined by the security policy.
+Provider failure details may be recorded in controlled server logs only when safe to do so.
 
-## Account Deletion
+---
 
-Account deletion is separate from authentication.
+# Authentication Logging
 
-Deleting or anonymizing identity information must consider:
+Security-relevant authentication events should be logged appropriately.
 
-- active sessions
-- historical records
-- bookings
-- financial records
-- audit requirements
-- legal retention requirements
+Potential events include:
 
-## Authentication Data Minimization
+- successful login
+- failed login
+- logout
+- OAuth authentication failure
+- OAuth identity linking
+- OAuth identity unlinking
+- password change
+- session invalidation
+- account disablement
 
-Store only authentication information that is actually required.
+Logs must never contain:
 
-Do not collect or retain unnecessary credential-related data.
+- passwords
+- session secrets
+- authorization codes
+- OAuth state
+- OAuth nonce
+- PKCE verifier
+- ID tokens
+- access tokens
+- refresh tokens
+- client secrets
+- private keys
 
-## Secret Management
+---
 
-Authentication secrets must never be committed to Git.
+# Account Enumeration
 
-Examples:
+Authentication responses should avoid exposing whether a particular email address is already registered when doing so would enable account enumeration.
 
-```text
-session-signing secrets
-reset-token secrets
-email provider credentials
-```
+OAuth account resolution must not expose sensitive information about another local user's identity ownership.
 
-Sensitive configuration must remain server-side.
+---
 
-## CSRF
+# Brute-Force and Abuse Protection
 
-If browser authentication uses cookies, state-changing requests must include appropriate CSRF protection.
+Authentication endpoints must eventually be protected against abuse.
 
-The exact mechanism will be selected during implementation.
+Potential controls include:
 
-## CORS
+- rate limiting
+- throttling
+- progressive delays
+- suspicious-activity detection
+- credential-stuffing defenses
+
+The final mechanisms will be implemented with the authentication service and security hardening work.
+
+---
+
+# CSRF
+
+Cookie-based authentication requires appropriate protection against cross-site request forgery.
+
+The exact application-wide CSRF mechanism will be selected as the authenticated browser API is implemented.
+
+OAuth `state` protects the OAuth authorization transaction specifically and does not replace general CSRF protections for unrelated state-changing application requests.
+
+---
+
+# CORS
 
 Authenticated API access must use explicitly configured allowed origins.
 
-Wildcard origins must not be used for authenticated production traffic without a documented security reason.
+Wildcard production origins must not be used for authenticated traffic without a documented security reason.
 
-## Authentication API
-
-Authentication endpoints will live under:
+Local development currently uses the Next.js development origin:
 
 ```text
-/api/v1/auth
+http://localhost:3000
 ```
 
-Potential endpoints include:
+---
 
-```text
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-POST /api/v1/auth/logout
-GET  /api/v1/auth/me
-POST /api/v1/auth/password-reset/request
-POST /api/v1/auth/password-reset/confirm
-POST /api/v1/auth/password/change
-```
+# Frontend Authentication UI
 
-Only endpoints required by the current implementation step should be created.
+The authentication system will eventually provide responsive user interfaces for:
 
-## Authentication Middleware
-
-Protected API requests should pass through authentication middleware that establishes the authenticated identity context.
-
-Handlers should not repeatedly implement session parsing logic themselves.
-
-## Identity Context
-
-Authenticated requests should carry a server-controlled identity context.
-
-Application services should receive the authenticated identity through explicit application context rather than trusting user-provided identity fields.
-
-## Client-Supplied Identity
-
-The server must never trust client-provided values such as:
-
-```text
-user_id
-role
-tenant_id
-business_id
-```
-
-for authorization decisions.
-
-The server must derive trusted identity from the authenticated session and authorization rules.
-
-## Testing
-
-Authentication must eventually have tests for:
-
-- valid login
-- invalid credentials
-- disabled user
+- registration
+- sign in
+- password authentication
+- Continue with Google
+- Continue with Apple
+- password visibility
+- validation errors
+- authentication loading states
+- OAuth errors
 - logout
-- expired session
-- revoked session
-- password change
-- reset-token expiration
-- reset-token reuse
-- account enumeration resistance
-- brute-force protections
+- session expiration
 
-Security-sensitive failure paths must be tested.
+The authentication UI belongs to Phase 3.
 
-## Phase 3 Boundary
+It must remain:
 
-This architecture document defines authentication only.
+```text
+mobile-first
+responsive
+accessible
+touch-friendly
+```
+
+The frontend must never contain:
+
+- OAuth client secrets
+- Apple private keys
+- server-side OAuth transaction keys
+- provider access tokens that do not need browser exposure
+- password hashes
+
+The frontend is a client of the authentication API, not the authority for authentication.
+
+---
+
+# Current OAuth Implementation Status
+
+Phase 3.5-A is complete at the code/foundation level.
+
+Implemented:
+
+- OAuth identity persistence
+- Google OAuth/OIDC foundation
+- Apple Sign in with Apple foundation
+- state
+- nonce
+- PKCE S256
+- encrypted OAuth transaction
+- protected transaction cookie
+- code exchange foundation
+- OIDC claims validation
+- JWK-backed signature verification
+- identity normalization
+- Apple client-secret generation
+- OAuth repository integration
+- OAuth security testing
+
+Not yet completed:
+
+- authentication-service integration
+- application-session integration
+- complete production callback integration
+- live Google provider verification
+- live Apple provider verification
+- frontend OAuth login UI
+- complete registration/login integration
+
+---
+
+# Manual Provider Configuration Boundary
+
+Real Google and Apple authentication require human configuration.
+
+The application must not fabricate:
+
+- OAuth client IDs
+- client secrets
+- Apple Team IDs
+- Apple Key IDs
+- Apple private keys
+- provider redirect registrations
+
+Real provider configuration must be performed through the appropriate provider developer consoles.
+
+Secrets must remain outside source control and must never be provided through chat.
+
+---
+
+# Phase 3 Boundary
+
+Phase 3 covers authentication and the foundation required for authorization.
 
 It does not implement:
 
-- RBAC
 - multi-tenancy
-- business roles
-- tenant membership
-- business permissions
+- business authorization
+- customer authorization
 - booking authorization
+- payment authorization
+- messaging permissions
+- production security hardening
+- full OWASP ASVS verification
 
-Those belong to later authorized work.
+Those capabilities belong to their authorized phases.
 
-## Core Principle
+---
+
+# Core Principles
 
 Authentication must be:
 
 ```text
 Secure
-Revocable
 Server-controlled
-Testable
+Revocable
 Minimal
+Testable
+Provider-aware
 Independent from authorization
 ```
+
+OAuth must be:
+
+```text
+Validated
+Bound to the authorization request
+Protected against tampering
+Protected against replay
+Based on stable provider identity
+Integrated into the local application identity model
+```
+
+The application must always remain the authority for its own user accounts, sessions, and authorization.

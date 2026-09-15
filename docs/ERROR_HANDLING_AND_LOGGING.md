@@ -458,3 +458,5 @@ Clients receive safe and consistent errors.
 Developers and operators receive enough internal information to diagnose problems.
 
 Sensitive information remains protected.
+
+Add that OAuth errors must not expose authorization codes, tokens, private keys, client secrets, or sensitive provider response details.

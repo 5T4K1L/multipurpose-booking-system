@@ -392,3 +392,5 @@ Explicit shutdown
 ```
 
 over hidden global state or unmanaged background behavior.
+
+Only update this if it already documents authentication request lifecycle and OAuth meaningfully changes that lifecycle. Otherwise leave it alone.

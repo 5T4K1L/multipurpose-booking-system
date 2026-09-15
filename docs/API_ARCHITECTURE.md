@@ -2,162 +2,242 @@
 
 ## Purpose
 
-This document defines the conventions for the Go HTTP API.
+This document defines the HTTP API architecture for the Universal Booking Platform.
 
-All future API endpoints should follow these rules unless an explicit architectural decision changes them.
+The API is the controlled boundary between the frontend and backend application logic.
 
-## API Style
+It must provide:
 
-The backend exposes an HTTP JSON API.
+- predictable resource-oriented endpoints
+- authenticated request handling
+- authorization enforcement
+- validation
+- consistent errors
+- tenant isolation
+- idempotency where required
+- safe integration with external providers
 
-Primary format:
+---
+
+# API Stack
+
+The API is implemented in Go.
+
+The conceptual request flow is:
 
 ```text
-Request
-    ↓
-HTTP Handler
-    ↓
-Application Service
-    ↓
+Browser
+   ↓
+Next.js
+   ↓
+HTTP API
+   ↓
+Handler
+   ↓
+Service
+   ↓
 Repository
-    ↓
+   ↓
 PostgreSQL
 ```
 
-The API should remain predictable and consistent across the platform.
+External systems are accessed through controlled service/provider boundaries.
 
-## Base Path
+The frontend must never access PostgreSQL directly.
 
-Application API routes use:
+---
 
-```text
-/api
-```
+# API Base Path
 
-Example:
-
-```text
-GET /api/health
-```
-
-Infrastructure or server-level endpoints may exist outside the application API namespace when justified.
-
-## Versioning
-
-The initial API version is:
+The current API versioning convention is:
 
 ```text
 /api/v1
 ```
 
-Example:
+Examples:
 
 ```text
-GET /api/v1/health
+/api/v1/auth/register
+/api/v1/auth/login
+/api/v1/auth/logout
+/api/v1/auth/me
 ```
 
-Versioning is introduced to make future breaking API changes manageable.
+Versioning protects the application from breaking existing clients when future API changes are required.
 
-Do not create multiple API versions without a documented reason.
+---
 
-## HTTP Methods
+# HTTP Methods
 
-Use standard HTTP methods according to their intended purpose.
+Use standard HTTP methods according to resource semantics.
 
 ```text
-GET     Read data
-POST    Create a resource or execute an action
-PUT     Replace a resource
-PATCH   Partially update a resource
-DELETE  Remove a resource
+GET
+POST
+PUT
+PATCH
+DELETE
 ```
 
-Do not use `POST` for ordinary updates when another appropriate HTTP method exists.
+Preferred usage:
 
-## Resource Naming
+```text
+GET
+    retrieve data
 
-Use plural nouns for resource collections.
+POST
+    create or trigger an action
+
+PUT
+    replace a resource where appropriate
+
+PATCH
+    partially update a resource
+
+DELETE
+    remove or deactivate a resource where appropriate
+```
+
+The project does not need to force every endpoint into a rigid REST pattern when a domain action is clearer.
+
+---
+
+# Resource Naming
+
+Resource paths should use plural nouns where appropriate.
 
 Examples:
 
 ```text
-/api/v1/businesses
-/api/v1/customers
-/api/v1/bookings
-/api/v1/services
+/users
+/businesses
+/bookings
+/customers
+/services
+/messages
 ```
 
-Nested resources may be used when the relationship is meaningful.
+Action endpoints may be used where they represent a meaningful domain operation.
 
-Example:
+Examples:
 
 ```text
-/api/v1/businesses/{businessID}/services
+/auth/logout
+/bookings/{id}/cancel
 ```
 
-Avoid deeply nested routes.
+---
 
-## Resource IDs
+# Identifiers
 
-API resources should use stable identifiers.
+API resources should normally use stable IDs.
 
-Identifiers should not rely on array positions, UI indexes, or mutable business values.
+IDs must be validated server-side.
 
-## Request Format
+The server must never assume that possession of an object ID grants access to that object.
 
-JSON is the default request format for API endpoints that accept structured data.
+Authorization must verify ownership, membership, tenant scope, and resource access where required.
 
-Example:
+---
+
+# Request Validation
+
+All client input is untrusted.
+
+The API must validate:
+
+- request body
+- path parameters
+- query parameters
+- headers where applicable
+- content type
+- field format
+- field length
+- enum values
+- required fields
+- cross-field rules
+
+Validation must occur before sensitive business logic executes.
+
+---
+
+# Handler Responsibility
+
+HTTP handlers should remain thin.
+
+Handlers should primarily:
+
+- parse requests
+- validate request structure
+- obtain authenticated context
+- call the appropriate service
+- map service results to HTTP responses
+- map expected errors to safe API responses
+
+Handlers should not contain large amounts of business logic.
+
+---
+
+# Service Responsibility
+
+Services own application and domain behavior.
+
+Services may perform:
+
+- authentication
+- authorization decisions
+- booking rules
+- account linking policy
+- tenant checks
+- workflow orchestration
+- transaction coordination
+- external-provider coordination
+
+Services should not become generic transport-layer code.
+
+---
+
+# Repository Responsibility
+
+Repositories own database interaction.
+
+Repositories should:
+
+- execute sqlc-generated queries
+- load and persist domain data
+- handle expected database errors
+- provide persistence operations to services
+
+Repositories should not decide application-level authorization policy.
+
+---
+
+# Error Model
+
+The API should return consistent structured errors.
+
+Conceptually:
 
 ```json
 {
-  "name": "Example Service"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "The request is invalid.",
+    "request_id": "..."
+  }
 }
 ```
 
-Content type:
+The exact response structure must remain consistent across API endpoints.
+
+---
+
+# Error Categories
+
+The API should distinguish common classes such as:
 
 ```text
-application/json
-```
-
-## Response Format
-
-Successful responses should use JSON unless the endpoint explicitly requires another representation.
-
-Example:
-
-```json
-{
-  "id": "resource-id",
-  "name": "Example"
-}
-```
-
-Collection responses should provide a predictable structure.
-
-Example:
-
-```json
-{
-  "items": [],
-  "total": 0
-}
-```
-
-Pagination conventions will be finalized when the relevant feature is implemented.
-
-## HTTP Status Codes
-
-Use appropriate HTTP status codes.
-
-Common statuses:
-
-```text
-200 OK
-201 Created
-202 Accepted
-204 No Content
 400 Bad Request
 401 Unauthorized
 403 Forbidden
@@ -168,97 +248,385 @@ Common statuses:
 500 Internal Server Error
 ```
 
-Do not return `200 OK` for failed application operations merely to simplify frontend handling.
+Not every domain needs every status.
 
-## Error Responses
+The selected response must accurately represent the failure.
 
-API errors should use a consistent JSON structure.
+---
 
-Example:
+# Security-Sensitive Errors
 
-```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "The request contains invalid data."
-  }
-}
+Authentication and authorization failures must avoid leaking sensitive information.
+
+Do not return:
+
+- password hashes
+- provider tokens
+- authorization codes
+- internal stack traces
+- database errors
+- private keys
+- server secrets
+- sensitive account ownership information
+
+Error details must be safe for client exposure.
+
+---
+
+# Request IDs
+
+Requests should carry or receive a request identifier.
+
+The request ID is useful for:
+
+- debugging
+- tracing
+- support
+- security investigation
+- correlating server logs
+
+A client-supplied request ID may be accepted only under controlled validation.
+
+The server must never trust it as an authentication or authorization value.
+
+---
+
+# Authentication
+
+Protected API requests require application authentication.
+
+The request flow is conceptually:
+
+```text
+Request
+   ↓
+Session extraction
+   ↓
+Session validation
+   ↓
+Local user resolution
+   ↓
+Authentication context
+   ↓
+Authorization
+   ↓
+Handler / Service
 ```
 
-The `code` should be stable enough for client-side handling.
+Authentication establishes the local user identity.
 
-Human-readable messages may change.
+Authorization determines whether that identity may perform the requested operation.
 
-Internal implementation details, stack traces, SQL errors, secrets, and sensitive infrastructure information must not be exposed to clients.
+---
 
-## Validation Errors
+# Authentication Endpoints
 
-Validation failures should identify the affected field when practical.
+The planned authentication API includes:
 
-Example:
-
-```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "The request contains invalid data.",
-    "fields": {
-      "email": "must be a valid email address"
-    }
-  }
-}
+```text
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/logout
+GET  /api/v1/auth/me
 ```
 
-## Request IDs
+Additional authentication flows may include:
 
-The API should eventually support a request or correlation ID for tracing requests across logs and services.
+```text
+POST /api/v1/auth/password-reset/request
+POST /api/v1/auth/password-reset/complete
+```
 
-The exact implementation will be defined during the observability and reliability work.
+Exact naming may evolve with the completed Phase 3 implementation.
 
-Do not introduce unnecessary tracing infrastructure in the current phase.
+---
 
-## Authentication
+# OAuth Endpoints
 
-Authentication is not implemented in the current phase.
+OAuth provider flows use:
 
-When authentication is introduced, authenticated identity and authorization context should be established before application services execute protected operations.
+```text
+GET /api/v1/auth/google
+GET /api/v1/auth/google/callback
 
-Do not place authentication logic directly inside individual business handlers.
+GET /api/v1/auth/apple
+GET /api/v1/auth/apple/callback
+```
 
-## Authorization
+The provider-start endpoint:
 
-Authorization is not implemented in the current phase.
+1. validates the configured provider
+2. generates OAuth state
+3. generates OIDC nonce
+4. generates a PKCE verifier/challenge
+5. creates the temporary OAuth transaction
+6. protects the transaction
+7. redirects the browser to the provider
 
-When introduced, authorization decisions must be explicit and centrally understandable.
+The callback endpoint:
 
-Do not rely on frontend-only authorization.
+1. retrieves the transaction
+2. validates the transaction
+3. validates state
+4. exchanges the authorization code
+5. validates the provider response
+6. validates the ID token
+7. resolves the external identity
+8. passes the trusted identity to the authentication service
+9. establishes the normal application session when authentication succeeds
 
-## Idempotency
+---
 
-Idempotency requirements will apply to operations where duplicate execution could cause harmful or financially significant effects.
+# OAuth Callback Boundary
 
-Examples include:
+The OAuth callback must not directly create arbitrary users from untrusted callback data.
 
-- creating bookings
-- processing payments
-- financial operations
-- external side effects
+The trusted flow is:
 
-The exact mechanism will be defined before those features are implemented.
+```text
+Provider callback
+   ↓
+OAuth validation
+   ↓
+Verified external identity
+   ↓
+Authentication service
+   ↓
+Local user resolution
+   ↓
+Application session
+```
 
-Do not add an idempotency system to unrelated Phase 1 endpoints without a current requirement.
+The callback is an authentication transport boundary, not the final authority for application identity.
 
-## Pagination
+---
 
-Endpoints returning potentially large collections should use pagination.
+# OAuth Security Requirements
 
-The pagination contract will be standardized before the first large collection endpoint is implemented.
+OAuth endpoints must enforce:
 
-Do not load unbounded datasets into memory.
+```text
+state validation
+nonce validation
+PKCE S256
+OIDC signature validation
+issuer validation
+audience validation
+subject validation
+expiration validation
+not-before validation where applicable
+authorized-party validation when required
+```
 
-## Filtering
+Provider signing algorithms must be restricted to expected algorithms.
 
-Filtering should use explicit query parameters.
+OAuth secrets must remain server-side.
+
+---
+
+# OAuth Identity Lookup
+
+After successful provider validation, the application resolves:
+
+```text
+provider + provider_subject
+```
+
+against the OAuth identity table.
+
+The API must not use email as the authoritative provider identity lookup key.
+
+---
+
+# OAuth Account Linking
+
+Account linking is an authenticated operation.
+
+The conceptual API flow is:
+
+```text
+Authenticated User
+   ↓
+Link Provider
+   ↓
+Provider Authorization
+   ↓
+Provider Identity Validation
+   ↓
+Check External Identity Ownership
+   ↓
+Create OAuth Identity
+```
+
+A provider identity already attached to another user must not be silently transferred.
+
+Email equality must not automatically merge accounts.
+
+---
+
+# Session Authentication
+
+After successful authentication, the backend establishes the normal application session.
+
+OAuth does not create a separate permanent session system.
+
+The resulting authenticated request context must identify the same local user regardless of whether the user authenticated through:
+
+```text
+password
+Google
+Apple
+```
+
+---
+
+# Authorization
+
+Authorization occurs after authentication.
+
+The server must determine:
+
+```text
+Who is the user?
+What tenant or business context applies?
+What role does the user have?
+Does this role permit the operation?
+Does the user have access to this specific resource?
+```
+
+The client must never be treated as the authority for these decisions.
+
+---
+
+# Role-Based Access Control
+
+The platform uses application roles including:
+
+```text
+CUSTOMER
+BUSINESS_OWNER
+BUSINESS_ADMIN
+MANAGER
+STAFF
+PLATFORM_ADMIN
+PLATFORM_OPERATOR
+```
+
+The exact role model may evolve as the multi-tenant architecture is implemented.
+
+Authorization must remain server-side.
+
+---
+
+# Object-Level Authorization
+
+Passing a valid object ID is not sufficient.
+
+For example:
+
+```text
+GET /api/v1/bookings/{id}
+```
+
+must verify that the authenticated user has permission to access that booking.
+
+This protects against insecure direct object reference vulnerabilities.
+
+---
+
+# Tenant Authorization
+
+Tenant-owned API requests must derive trusted tenant context from authenticated membership and authorization state.
+
+A request such as:
+
+```text
+GET /api/v1/businesses/{business_id}/bookings
+```
+
+must not trust the URL value alone.
+
+The server must verify that the authenticated principal is authorized for that business.
+
+---
+
+# Query Scoping
+
+Repositories should receive trusted ownership or tenant context where required.
+
+Conceptually:
+
+```text
+Authenticated User
+        ↓
+Authorization
+        ↓
+Trusted Business ID
+        ↓
+Repository
+        ↓
+Tenant-Scoped Query
+```
+
+This reduces the risk of accidental cross-tenant access.
+
+---
+
+# Idempotency
+
+Idempotency should be used for operations where clients or infrastructure may safely retry requests.
+
+Important candidates include:
+
+- booking creation
+- payment operations
+- webhook processing
+- imports
+- notification operations
+- other externally retried commands
+
+Idempotency keys must be scoped appropriately to prevent cross-user or cross-tenant collisions.
+
+---
+
+# Concurrency
+
+The API must assume requests can execute concurrently.
+
+The service and database layers must protect operations such as:
+
+- booking creation
+- account linking
+- payment transitions
+- subscription changes
+- import commits
+
+Application-level checks must not be the only protection against race conditions.
+
+---
+
+# Pagination
+
+Collection endpoints should support pagination where datasets may grow significantly.
+
+Examples:
+
+```text
+GET /api/v1/bookings
+GET /api/v1/customers
+GET /api/v1/messages
+GET /api/v1/audit-events
+```
+
+Pagination should be explicit and predictable.
+
+Cursor pagination should be considered for high-volume or continuously changing collections.
+
+---
+
+# Filtering
+
+Filtering should be represented through validated query parameters.
 
 Example:
 
@@ -266,102 +634,356 @@ Example:
 GET /api/v1/bookings?status=confirmed
 ```
 
-Do not create ad-hoc request formats for each endpoint.
+The server must validate allowed filter values.
 
-## Sorting
+The client must not be allowed to inject raw SQL or arbitrary database expressions through filter parameters.
 
-Sorting should use explicit query parameters.
+---
+
+# Sorting
+
+Sorting must use an explicit allowlist.
 
 Example:
 
 ```text
-GET /api/v1/customers?sort=created_at
+?sort=created_at
+?sort=-created_at
 ```
 
-Allowed sortable fields should be controlled by the backend.
+The backend must map permitted sort names to known database columns.
 
-Clients must not be able to inject arbitrary SQL expressions.
+Never directly concatenate arbitrary client-supplied column names into SQL.
 
-## Search
+---
 
-Search behavior will be defined when the search and marketplace phase is implemented.
+# Search
 
-Search must not be confused with unrestricted database querying.
+Search parameters must be validated and scoped.
 
-## Date and Time
+Search must not bypass:
 
-API date/time values should use a standardized representation.
+- tenant isolation
+- authorization
+- soft-deletion rules
+- data visibility policies
 
-The backend must preserve timezone information when timezone context matters.
+Future dedicated search infrastructure may be introduced when justified by scale.
 
-Booking and availability functionality will define detailed time handling during their authorized phases.
+---
 
-## Money
+# Time Handling
 
-Financial values must not use floating-point representations for financial calculations.
+API requests involving time should use unambiguous representations.
 
-The exact money representation will be defined before payments and billing are implemented.
+For timestamps, use a standard timezone-aware representation.
 
-## Idempotent Reads
+The API must preserve enough information to correctly handle:
 
-GET requests should not create or modify application state.
+- timezone differences
+- daylight-saving transitions
+- booking duration
+- local business hours
 
-## API Documentation
+The backend remains authoritative for booking-time interpretation.
 
-API contracts should be documented as the API becomes more substantial.
+---
 
-OpenAPI may be introduced when the API contract becomes complex enough to justify it.
+# Currency and Money
 
-The API implementation and contract must remain synchronized.
+Monetary API values must be represented without floating-point ambiguity.
 
-## Security Rules
+Responses should communicate currency explicitly where monetary values are present.
 
-The API must:
+Payment operations must never accept arbitrary currency assumptions from the client.
 
-- validate incoming input
-- enforce authorization server-side when authorization exists
-- avoid exposing sensitive information
-- avoid trusting client-provided ownership information
-- use parameterized database access
-- apply appropriate request limits
-- return safe error messages
+---
 
-## Database Boundary
+# Authentication Headers and Cookies
 
-Handlers must never access PostgreSQL directly.
+The exact browser authentication mechanism is defined by the session architecture.
 
-The intended flow remains:
+Where cookies are used, the application must account for:
+
+- HttpOnly
+- Secure in production
+- SameSite policy
+- CSRF protection
+- controlled domain/path scope
+
+Sensitive session values must not be exposed to client-side JavaScript unnecessarily.
+
+---
+
+# CORS
+
+CORS must use an explicit allowlist for authenticated application traffic.
+
+The API must not broadly enable arbitrary production origins.
+
+Development configuration may allow the known local frontend origin.
+
+---
+
+# Content Types
+
+Endpoints should explicitly validate supported content types.
+
+JSON APIs should use:
 
 ```text
-HTTP Handler
-    ↓
-Service
-    ↓
-Repository
-    ↓
-PostgreSQL
+application/json
 ```
 
-## Frontend Boundary
+File upload endpoints require separate validation for:
 
-The frontend communicates with the API through HTTP.
+- MIME type
+- file extension
+- size
+- content
+- storage destination
+- authorization
 
-The frontend must not connect directly to PostgreSQL.
+---
 
-## API Stability
+# File Uploads
 
-Avoid unnecessary breaking changes.
+User-uploaded files must not be trusted based only on their filename or client-provided MIME type.
 
-When an API contract must change:
+Upload handling must validate:
 
-1. determine whether the change is breaking
-2. document the decision
-3. update affected clients
-4. update tests
-5. update API documentation
+- authenticated user
+- tenant
+- file size
+- content type
+- file signature where necessary
+- storage path
+- access policy
 
-## Phase 1 Rule
+Uploads must not be executable through the application server.
 
-API conventions should remain simple until actual product requirements require additional complexity.
+---
 
-Do not implement speculative API infrastructure.
+# Webhooks
+
+Webhook endpoints must be treated as security-sensitive integration boundaries.
+
+They must verify:
+
+- provider signature
+- timestamp/replay controls where provided
+- event identity
+- event authenticity
+- idempotency
+
+A webhook must not modify sensitive state before authentication of the webhook itself.
+
+---
+
+# External Provider Boundary
+
+External services must be accessed through controlled provider-specific implementations.
+
+The API must not expose provider-specific credentials or internal transport details to clients.
+
+Examples include:
+
+```text
+OAuth
+payments
+email
+SMS
+storage
+search
+messaging
+```
+
+---
+
+# Provider-Agnostic Interfaces
+
+Provider abstraction should be used only where multiple providers are realistically expected.
+
+Avoid large generic abstraction layers without a current product requirement.
+
+A practical structure is:
+
+```text
+Application Service
+        ↓
+Provider Interface
+        ↓
+Provider Adapter
+        ↓
+External Service
+```
+
+---
+
+# Logging
+
+API logs should support operational diagnosis without exposing secrets.
+
+Never log:
+
+- passwords
+- session tokens
+- OAuth codes
+- OAuth state
+- OAuth nonce
+- PKCE verifier
+- OAuth ID tokens
+- access tokens
+- refresh tokens
+- client secrets
+- private keys
+- payment card data
+
+Request IDs should be used for safe correlation.
+
+---
+
+# Rate Limiting
+
+Rate limiting should be applied to sensitive and abuse-prone endpoints.
+
+High-priority examples include:
+
+- login
+- registration
+- password reset
+- OAuth initiation
+- OAuth callbacks
+- account linking
+- webhook processing
+- high-cost search
+- public booking endpoints
+
+The exact implementation may use the API layer first and later a shared infrastructure component such as Redis when justified.
+
+---
+
+# API Security Boundary
+
+The API must assume:
+
+```text
+All client input is untrusted.
+All browser state is untrusted.
+All object IDs are untrusted.
+All tenant IDs from the client are untrusted.
+All provider callback parameters are untrusted until validated.
+```
+
+Only validated server-side state may influence privileged operations.
+
+---
+
+# API Documentation
+
+Public or internal API documentation should describe:
+
+- endpoint
+- method
+- authentication requirement
+- request schema
+- response schema
+- errors
+- authorization requirements
+- idempotency requirements
+- pagination behavior
+
+Documentation must not contain real secrets or production credentials.
+
+---
+
+# Testing
+
+API testing should cover:
+
+```text
+authentication
+authorization
+validation
+tenant isolation
+object-level access
+OAuth callback validation
+session behavior
+error handling
+idempotency
+concurrency
+pagination
+rate limiting
+```
+
+Security-sensitive paths require both positive and negative test cases.
+
+---
+
+# Current Phase 3 API Status
+
+Phase 3 authentication API architecture is defined.
+
+The current OAuth foundation includes:
+
+- Google authorization flow foundation
+- Apple authorization flow foundation
+- OAuth transaction handling
+- provider validation
+- identity resolution
+- OAuth repository operations
+
+The complete application API flow is still in progress.
+
+Remaining Phase 3 integration includes:
+
+- authentication service
+- session creation and validation
+- registration
+- password login
+- logout and revocation
+- authentication middleware
+- `/me`
+- RBAC enforcement
+- end-to-end OAuth route integration
+- authentication UI
+- security verification
+
+---
+
+# API Evolution
+
+Backward compatibility should be considered before changing stable API contracts.
+
+Breaking changes should normally result in:
+
+- versioning
+- migration strategy
+- client update plan
+- documentation update
+
+Do not introduce API versioning solely for cosmetic changes.
+
+---
+
+# Core Principles
+
+The API must remain:
+
+```text
+Thin at the transport layer
+Strong at the service layer
+Strict at the authorization boundary
+Typed at the data boundary
+Transactional where necessary
+Tenant-aware
+Secure by default
+```
+
+The browser is a client.
+
+The API is the enforcement boundary.
+
+The service layer is the application authority.
+
+PostgreSQL remains the durable source of truth.
