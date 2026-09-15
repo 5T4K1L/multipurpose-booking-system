@@ -7,6 +7,8 @@ build/
 .env.*
 !.env.example
 
+.env.example
+
 coverage/
 
 *.log
@@ -22,3 +24,5 @@ bin/
 tmp/
 
 docker-compose.yml
+
+docs/TECHNICAL_TERMS.md
