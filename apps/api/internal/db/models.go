@@ -14,6 +14,7 @@ type User struct {
 	Username  string
 	CreatedAt pgtype.Timestamp
 	UpdatedAt pgtype.Timestamp
+	Status    string
 }
 
 type UserCredential struct {

@@ -5,7 +5,8 @@ SELECT
     email,
     username,
     created_at,
-    updated_at
+    updated_at,
+    status
 FROM users
 WHERE id = $1;
 
@@ -16,7 +17,8 @@ SELECT
     email,
     username,
     created_at,
-    updated_at
+    updated_at,
+    status
 FROM users
 WHERE email = $1;
 
@@ -35,4 +37,5 @@ RETURNING
     email,
     username,
     created_at,
-    updated_at;
+    updated_at,
+    status;

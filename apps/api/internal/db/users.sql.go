@@ -23,7 +23,8 @@ RETURNING
     email,
     username,
     created_at,
-    updated_at
+    updated_at,
+    status
 `
 
 type CreateUserParams struct {
@@ -41,6 +42,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
 	)
 	return i, err
 }
@@ -51,7 +53,8 @@ SELECT
     email,
     username,
     created_at,
-    updated_at
+    updated_at,
+    status
 FROM users
 WHERE email = $1
 `
@@ -66,6 +69,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Username,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
 	)
 	return i, err
 }
@@ -76,7 +80,8 @@ SELECT
     email,
     username,
     created_at,
-    updated_at
+    updated_at,
+    status
 FROM users
 WHERE id = $1
 `
@@ -91,6 +96,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.Username,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
 	)
 	return i, err
 }

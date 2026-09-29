@@ -943,3 +943,26 @@ Integrated into the local application identity model
 ```
 
 The application must always remain the authority for its own user accounts, sessions, and authorization.
+
+## Phase 3.6 Service Policy
+
+The HTTP-independent service lives in `internal/service`; its persistence adapter lives
+in `internal/repository`. It returns a local user, never a session or provider token.
+The existing OAuth foundation must validate the external identity before calling it.
+
+`ResolveOAuth` first resolves by provider and subject. Creation is explicitly opt-in
+and requires a verified valid email. An existing exact email match requires explicit
+linking. Account creation and identity attachment commit together. Display names are
+supplementary; absent names use `User`. No password credential is created for OAuth users.
+
+`LinkOAuth` requires a trusted authenticated local user ID and an explicit, bound link
+intent from future session/HTTP integration. It rejects another user's identity and
+an existing different identity for the same provider. Repeating the same link is safe.
+No linking endpoint exists yet. Email matching never authorizes linking.
+
+Migration 000006 implements active/disabled account status. Every successful password,
+OAuth, linking, and local-user resolution checks status; unknown statuses fail closed.
+Password failures use the same error for missing users, missing credentials, and mismatch.
+Infrastructure details are not included in returned service error messages.
+
+Session initiation belongs to Phase 3.7. Callback/HTTP wiring is still deferred.

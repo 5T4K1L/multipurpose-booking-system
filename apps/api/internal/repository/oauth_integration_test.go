@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -28,12 +29,23 @@ func TestOAuthRepositoryIntegration(t *testing.T) {
 	}
 	defer dbPool.Close()
 
-	queries := db.New(dbPool)
+	tx, err := dbPool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin test transaction: %v", err)
+	}
+	defer func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
+		if err := tx.Rollback(cleanupCtx); err != nil {
+			t.Errorf("roll back test data: %v", err)
+		}
+	}()
+	queries := db.New(tx)
 
 	userRepository := NewUserRepository(queries)
 	oauthRepository := NewOAuthRepository(queries)
 
-	email := "oauth-integration-test@example.com"
+	email := fmt.Sprintf("oauth-integration-%d@example.com", time.Now().UnixNano())
 	username := "OAuth Integration Test"
 
 	user, err := userRepository.CreateUser(
@@ -45,22 +57,11 @@ func TestOAuthRepositoryIntegration(t *testing.T) {
 		t.Fatalf("create test user: %v", err)
 	}
 
-	defer func() {
-		_, err := dbPool.Exec(
-			ctx,
-			"DELETE FROM users WHERE id = $1",
-			user.ID,
-		)
-		if err != nil {
-			t.Fatalf("delete test user: %v", err)
-		}
-	}()
-
 	created, err := oauthRepository.CreateOAuthIdentity(
 		ctx,
 		user.ID,
 		"google",
-		"test-google-subject",
+		email,
 	)
 	if err != nil {
 		t.Fatalf("create OAuth identity: %v", err)
@@ -69,7 +70,7 @@ func TestOAuthRepositoryIntegration(t *testing.T) {
 	found, err := oauthRepository.GetOAuthIdentity(
 		ctx,
 		"google",
-		"test-google-subject",
+		email,
 	)
 	if err != nil {
 		t.Fatalf("get OAuth identity: %v", err)
@@ -98,7 +99,7 @@ func TestOAuthRepositoryIntegration(t *testing.T) {
 		)
 	}
 
-	if found.ProviderSubject != "test-google-subject" {
+	if found.ProviderSubject != email {
 		t.Fatalf(
 			"unexpected provider subject: %q",
 			found.ProviderSubject,

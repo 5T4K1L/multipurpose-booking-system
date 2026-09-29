@@ -540,9 +540,9 @@ These should not be treated as completed merely because the provider foundation 
 
 ## Status
 
-NEXT
+IMPLEMENTED - service layer; session and HTTP integration deferred
 
-The authentication service will become the central application layer for:
+The authentication service is the central application layer for:
 
 - password authentication
 - OAuth identity resolution
@@ -550,7 +550,7 @@ The authentication service will become the central application layer for:
 - account linking
 - account status checks
 - authentication policy
-- session initiation
+- session initiation (deferred to Phase 3.7)
 
 The service must remain independent from HTTP transport details.
 
@@ -1309,13 +1309,13 @@ PHASE 3 — Authentication + Authorization
 The most recent completed development milestone is:
 
 ```text id="d7e8f9"
-PHASE 3.5-A — Google + Apple OAuth foundation
+PHASE 3.6 - Authentication Service
 ```
 
 The next implementation milestone is:
 
 ```text id="g0h1i2"
-PHASE 3.6 — Authentication Service
+PHASE 3.7 - Application Session / Token Management
 ```
 
 The next phase after Phase 3 remains:

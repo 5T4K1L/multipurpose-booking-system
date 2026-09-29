@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"multipurpose-booking-system/api/internal/database"
-	"multipurpose-booking-system/api/internal/db"
 	"multipurpose-booking-system/api/internal/migrations"
 	"multipurpose-booking-system/api/internal/repository"
 	"multipurpose-booking-system/api/internal/server"
+	"multipurpose-booking-system/api/internal/service"
 )
 
 func main() {
@@ -39,17 +39,8 @@ func main() {
 	}
 	defer dbPool.Close()
 
-	// Create the generated sqlc query layer.
-	queries := db.New(dbPool)
-
-	// Create the user repository.
-	_ = repository.NewUserRepository(queries)
-
-	// Create the authentication repository.
-	authRepository := repository.NewAuthRepository(queries)
-
-	// Keep the repository ready for the authentication service.
-	_ = authRepository
+	// Prepared for the later session and HTTP integration steps.
+	_ = service.NewAuthenticationService(repository.NewAuthenticationTransactions(dbPool))
 
 	mux := http.NewServeMux()
 

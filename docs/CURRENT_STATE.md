@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.5-A — Google + Apple OAuth Add-on
+3.6 - Authentication Service Layer
 
-The OAuth foundation has been implemented and locally verified.
+Phase 3.6 is implemented; the Phase 3.5-A OAuth foundation is preserved.
 
-The next authorized implementation step is:
+The next implementation step, requiring separate authorization, is:
 
-3.6 — Authentication Service Layer
+3.7 - Session / Token Management
 
 ---
 
@@ -381,7 +381,7 @@ Authentication Service
 Application Session
 ```
 
-The final authentication-service and application-session portions are not yet implemented.
+The authentication service is implemented separately; callback wiring and application sessions remain deferred.
 
 ---
 
@@ -452,7 +452,6 @@ migrations/
 
 The following remain intentionally incomplete:
 
-- authentication service
 - application session service integration
 - registration
 - login
@@ -494,7 +493,7 @@ The following remain intentionally incomplete:
 # Known Issues
 
 - `docs/CURRENT_STATE.md` was previously stale and has now been synchronized with the current Phase 3 state.
-- Authentication service integration is not yet implemented.
+- Authentication service is implemented; HTTP/callback integration remains deferred.
 - Application session creation is not yet integrated with password and OAuth authentication flows.
 - Real Google provider configuration has not yet been completed.
 - Real Apple provider configuration has not yet been completed.
@@ -638,7 +637,7 @@ Current Phase 3 sequence:
 3.4  Password Hashing                               COMPLETE
 3.5  Authentication Repository Layer                COMPLETE
 3.5-A Google + Apple OAuth Add-on                  COMPLETE
-3.6  Authentication Service Layer                   NEXT
+3.6  Authentication Service Layer                   COMPLETE
 3.7  Session / Token Management                     PENDING
 3.8  Registration                                   PENDING
 3.9  Login                                          PENDING
@@ -654,11 +653,11 @@ Current Phase 3 sequence:
 
 # Next Step
 
-The next authorized implementation step is:
+The next implementation step, requiring separate authorization, is:
 
-## PHASE 3.6 — Authentication Service Layer
+## PHASE 3.7 - Session / Token Management
 
-The authentication service will become the application-level boundary that unifies:
+The implemented authentication service is the application-level boundary that unifies:
 
 ```text
 Password authentication
@@ -700,3 +699,26 @@ After Phase 3 completion:
 - report known issues
 - formally close Phase 3
 - hard stop before Phase 4
+
+## Phase 3.6 Implementation
+
+- `internal/service/authentication.go`: password authentication, local-user resolution,
+  validated OAuth identity resolution, explicit linking, and safe service errors.
+- New OAuth users require server-side creation permission and a verified, valid email.
+  Existing email matches require explicit linking; no automatic account merging occurs.
+- Existing OAuth subjects resolve without requiring an email claim again (including Apple).
+- Explicit linking requires a server-authenticated local user and a provider-verified identity.
+  Future HTTP integration must bind the link action and user to the OAuth transaction.
+- User creation and identity attachment share a PostgreSQL transaction. Unique constraints
+  prevent competing identity ownership; failures roll back both writes.
+- Migration 000006 adds `active`/`disabled` status, defaulting existing users to active.
+  Apply through the normal migration runner before using the service.
+- Email lookup and uniqueness retain existing exact, case-sensitive semantics.
+- Verified against local PostgreSQL on 2026-09-29: migrations 000005 and 000006 applied,
+  full uncached Go suite passed with DATABASE_URL set, and repository integration tests
+  passed twice consecutively, including atomic rollback. Go build, vet, and formatting pass.
+- Fixed the existing OAuth integration test's fixed-data collision and foreign-key cleanup:
+  each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
+- No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
+
+Next task: Phase 3.7 application session management, after separate authorization.
