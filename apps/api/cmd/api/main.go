@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"multipurpose-booking-system/api/internal/database"
 	"multipurpose-booking-system/api/internal/migrations"
@@ -39,8 +40,14 @@ func main() {
 	}
 	defer dbPool.Close()
 
-	// Prepared for the later session and HTTP integration steps.
-	_ = service.NewAuthenticationService(repository.NewAuthenticationTransactions(dbPool))
+	// Services are ready for later HTTP integration. Session lifetime is absolute.
+	authenticationService := service.NewAuthenticationService(repository.NewAuthenticationTransactions(dbPool))
+	sessionService, err := service.NewSessionService(repository.NewSessionTransactions(dbPool), 24*time.Hour)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = authenticationService
+	_ = sessionService
 
 	mux := http.NewServeMux()
 

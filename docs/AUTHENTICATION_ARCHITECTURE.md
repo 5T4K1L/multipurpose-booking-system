@@ -965,4 +965,28 @@ OAuth, linking, and local-user resolution checks status; unknown statuses fail c
 Password failures use the same error for missing users, missing credentials, and mismatch.
 Infrastructure details are not included in returned service error messages.
 
-Session initiation belongs to Phase 3.7. Callback/HTTP wiring is still deferred.
+Session initiation is implemented by Phase 3.7. Callback/HTTP wiring is still deferred.
+
+
+## Phase 3.7 Session Policy
+
+The SessionService creates independent opaque 256-bit random bearer tokens and stores
+only their SHA-256 hashes in user_sessions. Password and verified OAuth authentication
+use this shared service. Each successful authentication creates a fresh token.
+Raw tokens must be delivered only through the future protected cookie layer and never
+logged; they are excluded from ordinary JSON serialization.
+
+Sessions have a constructor-configured absolute lifetime (24 hours in main), checked
+using UTC. Last-seen updates never renew expiration. Validation requires a stored,
+unrevoked, unexpired session and an active local account. Unknown account states fail
+closed. Single-token revocation is idempotent; RevokeAll requires a trusted user ID
+from an authenticated owner or separately authorized account-security operation.
+
+Account disablement blocks validation while disabled. To prevent prior sessions from
+working after reactivation, the later account-lifecycle workflow must also call RevokeAll.
+Revocation does not cancel requests already being processed. Authentication resolution
+and session issuance use separate transactions; issuance failure returns no bearer token
+but does not delete an already-resolved or newly-created OAuth account.
+
+No HTTP/cookie integration, registration/login/logout endpoints, middleware, /me, RBAC,
+sliding expiry, refresh tokens, or background session cleanup is added in Phase 3.7.

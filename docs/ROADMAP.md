@@ -550,13 +550,17 @@ The authentication service is the central application layer for:
 - account linking
 - account status checks
 - authentication policy
-- session initiation (deferred to Phase 3.7)
+- session initiation (implemented by the Phase 3.7 session service)
 
 The service must remain independent from HTTP transport details.
 
 ---
 
 # Phase 3.7 — Application Session / Token Management
+
+## Status
+
+IMPLEMENTED AND DATABASE-VERIFIED - session service; HTTP delivery remains deferred.
 
 ## Objective
 
@@ -1309,13 +1313,13 @@ PHASE 3 — Authentication + Authorization
 The most recent completed development milestone is:
 
 ```text id="d7e8f9"
-PHASE 3.6 - Authentication Service
+PHASE 3.7 - Application Session / Token Management
 ```
 
 The next implementation milestone is:
 
 ```text id="g0h1i2"
-PHASE 3.7 - Application Session / Token Management
+PHASE 3.8 - Registration
 ```
 
 The next phase after Phase 3 remains:

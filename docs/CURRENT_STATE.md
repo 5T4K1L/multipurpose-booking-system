@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.6 - Authentication Service Layer
+3.7 - Session / Token Management
 
-Phase 3.6 is implemented; the Phase 3.5-A OAuth foundation is preserved.
+Phase 3.7 is implemented and database-verified; Phase 3.6 and the OAuth foundation are preserved.
 
 The next implementation step, requiring separate authorization, is:
 
-3.7 - Session / Token Management
+3.8 - Registration
 
 ---
 
@@ -381,7 +381,7 @@ Authentication Service
 Application Session
 ```
 
-The authentication service is implemented separately; callback wiring and application sessions remain deferred.
+Authentication and session services are implemented; HTTP callback wiring remains deferred.
 
 ---
 
@@ -452,7 +452,7 @@ migrations/
 
 The following remain intentionally incomplete:
 
-- application session service integration
+- application session HTTP/cookie integration
 - registration
 - login
 - logout
@@ -494,7 +494,7 @@ The following remain intentionally incomplete:
 
 - `docs/CURRENT_STATE.md` was previously stale and has now been synchronized with the current Phase 3 state.
 - Authentication service is implemented; HTTP/callback integration remains deferred.
-- Application session creation is not yet integrated with password and OAuth authentication flows.
+- Password and OAuth service methods create application sessions; HTTP/cookie delivery remains deferred.
 - Real Google provider configuration has not yet been completed.
 - Real Apple provider configuration has not yet been completed.
 - Live Google and Apple authentication have not yet been verified.
@@ -638,7 +638,7 @@ Current Phase 3 sequence:
 3.5  Authentication Repository Layer                COMPLETE
 3.5-A Google + Apple OAuth Add-on                  COMPLETE
 3.6  Authentication Service Layer                   COMPLETE
-3.7  Session / Token Management                     PENDING
+3.7  Session / Token Management                     COMPLETE
 3.8  Registration                                   PENDING
 3.9  Login                                          PENDING
 3.10 Logout + Session Revocation                    PENDING
@@ -655,7 +655,7 @@ Current Phase 3 sequence:
 
 The next implementation step, requiring separate authorization, is:
 
-## PHASE 3.7 - Session / Token Management
+## PHASE 3.8 - Registration
 
 The implemented authentication service is the application-level boundary that unifies:
 
@@ -677,7 +677,7 @@ It will remain separate from:
 - booking permissions
 - RBAC implementation
 
-The application session mechanism will be integrated through the authorized session-management step.
+The application session mechanism is implemented. Registration is the next separately authorized step.
 
 ---
 
@@ -721,4 +721,27 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.7 application session management, after separate authorization.
+Next task: Phase 3.8 registration, after separate authorization.
+
+
+## Phase 3.7 Implementation and Verification
+
+- `internal/service/session.go` provides creation, validation, single-token revocation,
+  and all-session revocation through an HTTP-independent service.
+- Password and verified OAuth authentication share the same session creation path.
+- Tokens contain 32 cryptographically random bytes encoded as unpadded base64url.
+  Only SHA-256 hashes are persisted. Raw tokens are returned once for future cookie
+  delivery and omitted from ordinary JSON serialization; never log them.
+- The constructor accepts an absolute lifetime; main supplies 24 hours. Validation
+  updates last_seen_at but never extends expiration. Missing, malformed, expired,
+  revoked, and disabled-account sessions fail closed.
+- Active account status is checked at creation and every validation. Disabling an
+  account blocks use while disabled; permanent invalidation requires RevokeAll.
+- Database transactions wrap session operations; commit failures return no token/user.
+  Concurrent already-running requests are not cancelled by revocation.
+- Existing user_sessions schema and queries are reused; no new migration/dependency.
+- Full database-enabled `go test ./... -count=1`, build, vet, and formatting passed.
+- HTTP endpoints, cookie delivery/CSRF policy, middleware, /me, registration, RBAC,
+  refresh/sliding sessions, and expired-row cleanup remain outside this step.
+- OAuth identity resolution and session creation are separate transactions: a session
+  storage failure may leave the resolved/new account intact, but returns no session.
