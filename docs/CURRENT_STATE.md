@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.7 - Session / Token Management
+3.8 - Registration
 
-Phase 3.7 is implemented and database-verified; Phase 3.6 and the OAuth foundation are preserved.
+Phase 3.8 registration is implemented; verification results are recorded below. Existing authentication and session behavior is preserved.
 
 The next implementation step, requiring separate authorization, is:
 
-3.8 - Registration
+3.9 - Login
 
 ---
 
@@ -453,7 +453,7 @@ migrations/
 The following remain intentionally incomplete:
 
 - application session HTTP/cookie integration
-- registration
+- email verification delivery
 - login
 - logout
 - current-user endpoint
@@ -639,7 +639,7 @@ Current Phase 3 sequence:
 3.5-A Google + Apple OAuth Add-on                  COMPLETE
 3.6  Authentication Service Layer                   COMPLETE
 3.7  Session / Token Management                     COMPLETE
-3.8  Registration                                   PENDING
+3.8  Registration                                   COMPLETE
 3.9  Login                                          PENDING
 3.10 Logout + Session Revocation                    PENDING
 3.11 Authentication Middleware                      PENDING
@@ -655,7 +655,7 @@ Current Phase 3 sequence:
 
 The next implementation step, requiring separate authorization, is:
 
-## PHASE 3.8 - Registration
+## PHASE 3.9 - Login
 
 The implemented authentication service is the application-level boundary that unifies:
 
@@ -677,7 +677,7 @@ It will remain separate from:
 - booking permissions
 - RBAC implementation
 
-The application session mechanism is implemented. Registration is the next separately authorized step.
+Registration and the application session mechanism are implemented. Password login is the next separately authorized step.
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.8 registration, after separate authorization.
+Next task: Phase 3.9 login, after separate authorization.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -745,3 +745,23 @@ Next task: Phase 3.8 registration, after separate authorization.
   refresh/sliding sessions, and expired-row cleanup remain outside this step.
 - OAuth identity resolution and session creation are separate transactions: a session
   storage failure may leave the resolved/new account intact, but returns no session.
+
+## Phase 3.8 Implementation and Verification (2026-10-01)
+
+- Added transactional registration service and POST /api/v1/auth/register, plus the
+  responsive /register form. Existing password, OAuth, session, and health behavior remains.
+- Input validation, salted Argon2id hashing, neutral duplicate responses, safe security
+  logs, per-peer rate limiting, and concurrent-hashing limits are implemented.
+- No session is issued and no email-verification claim is made. The current local
+  development policy creates active accounts; mailbox verification remains deferred.
+- Passed: gofmt, full database-enabled `go test ./... -count=1`, `go build ./...`,
+  `go vet ./...`, frontend ESLint, and Next.js production build including TypeScript.
+- Database tests cover concurrent duplicates, password preservation, prevention of
+  password attachment to existing accounts, and rollback of user plus credential.
+- Live HTTP smoke checks passed for /register, /health, CORS preflight, validation
+  errors, and no session cookie. Browser automation could not initialize, so an
+  interactive/visual browser check was not completed.
+- The frontend build uses the existing Google font downloads and required network access.
+- No migration or new dependency. See REGISTRATION.md for the full API, configuration,
+  verification policy, and the per-process rate limiter's deployment limitations.
+- Stop before Phase 3.9 login; middleware, /me, RBAC, and email delivery remain deferred.

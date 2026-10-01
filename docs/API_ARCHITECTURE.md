@@ -935,11 +935,12 @@ The current OAuth foundation includes:
 
 The complete application API flow is still in progress.
 
+Authentication and session services are implemented. Phase 3.8 adds registration
+through POST /api/v1/auth/register and the web /register form. See
+[Registration](REGISTRATION.md) for the contract and unverified-email policy.
+
 Remaining Phase 3 integration includes:
 
-- authentication service
-- session creation and validation
-- registration
 - password login
 - logout and revocation
 - authentication middleware

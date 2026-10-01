@@ -583,6 +583,8 @@ Password and OAuth authentication must converge on the same application session 
 
 # Phase 3.8 — Registration
 
+Status: IMPLEMENTED AND VERIFIED. See REGISTRATION.md for the API, form, unverified-email policy, and deployment limitations.
+
 ## Objective
 
 Implement local account registration.
@@ -1313,13 +1315,13 @@ PHASE 3 — Authentication + Authorization
 The most recent completed development milestone is:
 
 ```text id="d7e8f9"
-PHASE 3.7 - Application Session / Token Management
+PHASE 3.8 - Registration
 ```
 
 The next implementation milestone is:
 
 ```text id="g0h1i2"
-PHASE 3.8 - Registration
+PHASE 3.9 - Login
 ```
 
 The next phase after Phase 3 remains:

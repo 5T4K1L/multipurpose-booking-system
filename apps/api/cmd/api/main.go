@@ -50,6 +50,12 @@ func main() {
 	_ = sessionService
 
 	mux := http.NewServeMux()
+	webOrigin := os.Getenv("WEB_ORIGIN")
+	if webOrigin == "" {
+		webOrigin = "http://localhost:3000"
+	}
+	registrationService := service.NewRegistrationService(repository.NewRegistrationTransactions(dbPool))
+	mux.Handle("/api/v1/auth/register", server.NewRegistrationHandler(registrationService, webOrigin, nil))
 
 	// Register the API health endpoint.
 	mux.HandleFunc("/health", server.HealthHandler)

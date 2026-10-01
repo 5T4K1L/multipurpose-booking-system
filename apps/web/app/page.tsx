@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function Home() {
   const [apiStatus, setApiStatus] = useState("Checking API...");
@@ -32,6 +33,7 @@ export default function Home() {
         <p className="mt-4">
           API status: <strong>{apiStatus}</strong>
         </p>
+        <Link href="/register" className="mt-6 inline-block rounded-lg bg-blue-700 px-5 py-3 text-white">Create account</Link>
       </div>
     </main>
   );
