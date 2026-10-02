@@ -65,6 +65,7 @@ export default function LoginPage() {
           <p role={failed ? "alert" : "status"} className="min-h-6 text-sm">{message}</p>
         </form>
         <p className="mt-6 text-sm">New here? <Link href="/register" className="underline underline-offset-4">Create an account</Link></p>
+        <p className="mt-4 text-sm"><Link href="/logout" className="underline underline-offset-4">Sign out</Link></p>
       </section>
     </main>
   );

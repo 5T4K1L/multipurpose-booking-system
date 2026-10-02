@@ -943,8 +943,10 @@ Phase 3.9 adds POST /api/v1/auth/login with HttpOnly session-cookie delivery and
 web /login form. See [Login](LOGIN.md) for origin checks, CORS, cookie security, and
 safe credential failures.
 
+Phase 3.10 adds POST /api/v1/auth/logout and the web /logout page. See
+[Logout](LOGOUT.md) for revocation, cookie expiration, and retry behavior.
+
 Remaining Phase 3 integration includes:
-- logout and revocation
 - authentication middleware
 - `/me`
 - RBAC enforcement

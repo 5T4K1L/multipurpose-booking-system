@@ -11,10 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"mime"
-	"net"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -37,15 +34,9 @@ type LoginHandler struct {
 // HTTP cookies are permitted only for an explicitly loopback web origin.
 // HTTPS deployments always receive a Secure, host-only __Host- cookie.
 func NewLoginHandler(login passwordLogin, origin string, logger *slog.Logger) (*LoginHandler, error) {
-	parsed, err := url.Parse(origin)
-	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.Path != "" || origin != parsed.Scheme+"://"+parsed.Host {
-		return nil, errors.New("WEB_ORIGIN must be one exact HTTP(S) origin without a path")
-	}
-	secure := parsed.Scheme == "https"
-	ip := net.ParseIP(parsed.Hostname())
-	loopback := strings.EqualFold(parsed.Hostname(), "localhost") || (ip != nil && ip.IsLoopback())
-	if !secure && (parsed.Scheme != "http" || !loopback) {
-		return nil, errors.New("WEB_ORIGIN must use HTTPS outside loopback development")
+	secure, err := sessionCookieSecurity(origin)
+	if err != nil {
+		return nil, err
 	}
 	if logger == nil {
 		logger = slog.Default()
@@ -151,10 +142,7 @@ func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fail(503, "LOGIN_UNAVAILABLE", "Sign-in is temporarily unavailable.")
 		return
 	}
-	name := "booking_session"
-	if h.secure {
-		name = "__Host-booking_session"
-	}
+	name := sessionCookieName(h.secure)
 	maxAge := int(time.Until(issued.ExpiresAt).Seconds())
 	if maxAge < 1 {
 		maxAge = 1

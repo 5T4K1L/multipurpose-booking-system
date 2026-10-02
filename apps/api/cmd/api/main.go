@@ -59,6 +59,11 @@ func main() {
 		log.Fatal(err)
 	}
 	mux.Handle("/api/v1/auth/login", loginHandler)
+	logoutHandler, err := server.NewLogoutHandler(sessionService, webOrigin, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mux.Handle("/api/v1/auth/logout", logoutHandler)
 
 	// Register the API health endpoint.
 	mux.HandleFunc("/health", server.HealthHandler)

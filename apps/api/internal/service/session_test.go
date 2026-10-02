@@ -146,3 +146,16 @@ func TestSessionTokensAndRevocation(t *testing.T) {
 		t.Fatal("invalid lifetime accepted")
 	}
 }
+
+func TestSessionRevocationCommitFailure(t *testing.T) {
+	f := &sessionFake{user: db.User{ID: 1, Status: "active"}}
+	s, _ := NewSessionService(f, time.Hour)
+	issued, err := s.Create(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.commitErr = errors.New("private commit failure")
+	if err := s.Revoke(context.Background(), issued.Token); !errors.Is(err, ErrSessionUnavailable) {
+		t.Fatalf("revocation reported success before commit: %v", err)
+	}
+}

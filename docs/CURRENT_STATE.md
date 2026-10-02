@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.9 - Login
+3.10 - Logout + Session Revocation
 
-Phase 3.9 password login is implemented; verification results are recorded below. Existing registration and OAuth behavior is preserved.
+Phase 3.10 logout is implemented; verification results are recorded below. Existing registration, login, and OAuth behavior is preserved.
 
 The next implementation step, requiring separate authorization, is:
 
-3.10 - Logout + Session Revocation
+3.11 - Authentication Middleware
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.10 logout, after separate authorization.
+Next task: Phase 3.11 authentication middleware, after separate authorization.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -785,3 +785,24 @@ Next task: Phase 3.10 logout, after separate authorization.
   inherited unverified-email limitations. Existing multiple sessions remain valid.
 - Next: Phase 3.10 logout. No logout endpoint, authentication middleware, /me, RBAC,
   or OAuth callback HTTP wiring was implemented in this step.
+
+## Phase 3.10 Implementation and Verification (2026-10-02)
+
+- Added POST /api/v1/auth/logout and the /logout confirmation page, linked from home
+  and login. Logout revokes only the session identified by the HttpOnly cookie.
+- Exact Origin checks protect against logout CSRF. GET cannot mutate sessions.
+  Empty bodies, duplicate-cookie rejection, per-peer rate limits, no-store responses,
+  request IDs, and safe outcome logs bound the transport contract.
+- Revocation commits before the matching cookie is expired. Storage/commit failures
+  return 503 without clearing the cookie, allowing retry. Missing, invalid, unknown,
+  and already-revoked sessions produce an idempotent 204 response.
+- Expired sessions and disabled accounts can log out. Other sessions remain active.
+  Existing trusted RevokeAll remains available to future security workflows.
+- Passed: gofmt, database-enabled full Go tests, build, vet, frontend ESLint, and
+  Next.js production build including TypeScript. Integration tests verify persisted
+  revocation, repeated logout, other-session preservation, and expired/disabled logout.
+- Live HTTP registration/login/logout smoke checks passed, including persisted revocation,
+  cookie expiration, repeat logout, page response, and temporary-account cleanup.
+- Browser automation could not initialize; interactive/visual browser QA remains unverified.
+- No schema or dependency changes. See LOGOUT.md for API and deployment details.
+- Stop at Phase 3.10. Next: Phase 3.11 authentication middleware; /me and RBAC remain deferred.
