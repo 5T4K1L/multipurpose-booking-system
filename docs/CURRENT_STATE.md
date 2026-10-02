@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.11 - Authentication Middleware
+3.12 - /auth/me
 
-Phase 3.11 authentication middleware is implemented and verified. Existing public routes and OAuth behavior are preserved.
+Phase 3.12 current-account endpoint and account page are implemented and verified. Existing authentication behavior is preserved.
 
 The next implementation step, requiring separate authorization, is:
 
-3.12 - /auth/me
+3.13 - RBAC / Authorization
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.12 /auth/me, after separate authorization.
+Next task: Phase 3.13 RBAC / Authorization, after separate authorization.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -827,3 +827,22 @@ Next task: Phase 3.12 /auth/me, after separate authorization.
   protected endpoint, /auth/me, belongs to Phase 3.12. See AUTHENTICATION_MIDDLEWARE.md.
 - CORS/preflight, mutation CSRF checks, and resource authorization remain separate
   responsibilities. This step does not implement /auth/me, RBAC, or OAuth routes.
+
+## Phase 3.12 Implementation and Verification (2026-10-02)
+
+- Added GET /api/v1/auth/me protected by Phase 3.11 authentication middleware.
+  Response is an explicit allowlist: user.id, user.email, user.username.
+- A private request-context profile is populated from the user already loaded in
+  the successful session-validation transaction; no second lookup or client ID is used.
+- Configured-origin credentialed CORS and unauthenticated preflight wrap authentication.
+  Foreign origins are rejected; GET without Origin supports same-origin/non-browser use.
+  Responses are no-store. No session secrets, credentials, roles, or provider tokens leak.
+- Added /account with loading, signed-out, and unavailable states, linked from home/login.
+  It fetches with credentials, no-store, and timeout; no bearer secrets enter JavaScript.
+- Passed gofmt, full PostgreSQL-enabled go test ./... -count=1, go build ./...,
+  go vet ./..., frontend ESLint, and Next production build including TypeScript.
+- Live login/account/logout test passed, including safe profile, denial after logout,
+  account page response, and temporary fixture cleanup. Browser automation failed to
+  initialize, so visual/interactive browser QA remains unverified.
+- No schema, dependency, or manual configuration changes. See CURRENT_ACCOUNT.md.
+- Stop at Phase 3.12. Next: Phase 3.13 RBAC / Authorization.

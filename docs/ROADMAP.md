@@ -1320,13 +1320,13 @@ PHASE 3 — Authentication + Authorization
 The most recent completed development milestone is:
 
 ```text id="d7e8f9"
-PHASE 3.11 - Authentication Middleware
+PHASE 3.12 - /auth/me
 ```
 
 The next implementation milestone is:
 
 ```text id="g0h1i2"
-PHASE 3.12 - /auth/me
+PHASE 3.13 - RBAC / Authorization
 ```
 
 The next phase after Phase 3 remains:

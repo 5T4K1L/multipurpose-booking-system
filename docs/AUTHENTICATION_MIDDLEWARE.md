@@ -30,7 +30,9 @@ request context plus trusted identity, so it is not prematurely cancelled.
 
 Register public health, registration, login and logout handlers without this wrapper.
 Logout must remain usable with expired/disabled sessions. Do not wrap the entire mux.
-No production protected endpoint is added in Phase 3.11: Phase 3.12 will wire /auth/me.
+Phase 3.12 now wraps GET /api/v1/auth/me. It uses a separate private context value
+containing the safe profile loaded during validation; IdentityFromContext remains
+a minimal UserID-only interface.
 Unit and PostgreSQL integration tests use a protected handler to verify the boundary.
 
 This middleware provides authentication only. A CORS layer must handle preflight

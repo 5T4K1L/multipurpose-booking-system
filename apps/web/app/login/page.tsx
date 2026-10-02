@@ -66,6 +66,7 @@ export default function LoginPage() {
         </form>
         <p className="mt-6 text-sm">New here? <Link href="/register" className="underline underline-offset-4">Create an account</Link></p>
         <p className="mt-4 text-sm"><Link href="/logout" className="underline underline-offset-4">Sign out</Link></p>
+        <p className="mt-4 text-sm"><Link href="/account" className="underline underline-offset-4">Your account</Link></p>
       </section>
     </main>
   );

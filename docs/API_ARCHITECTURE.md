@@ -948,10 +948,11 @@ Phase 3.10 adds POST /api/v1/auth/logout and the web /logout page. See
 
 Phase 3.11 adds route-scoped authentication middleware and trusted local identity
 context. See [Authentication middleware](AUTHENTICATION_MIDDLEWARE.md). Existing
-public routes remain unwrapped; Phase 3.12 will introduce the first protected endpoint.
+public routes remain unwrapped. Phase 3.12 adds GET /api/v1/auth/me as the first
+protected endpoint, returning safe local account details to /account. See
+[Current account](CURRENT_ACCOUNT.md).
 
 Remaining Phase 3 integration includes:
-- `/me`
 - RBAC enforcement
 - end-to-end OAuth route integration
 - authentication UI

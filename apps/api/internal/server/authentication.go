@@ -99,6 +99,7 @@ func (m *AuthenticationMiddleware) Require(next http.Handler) http.Handler {
 		// Never trust user IDs from headers, query strings, bodies or an earlier context.
 		// Use the original request context so the validation timeout doesn't cancel next.
 		trusted := context.WithValue(r.Context(), identityContextKey{}, Identity{UserID: user.ID})
+		trusted = context.WithValue(trusted, currentUserContextKey{}, currentUser{ID: user.ID, Email: user.Email, Username: user.Username})
 		next.ServeHTTP(w, r.WithContext(trusted))
 	})
 }
