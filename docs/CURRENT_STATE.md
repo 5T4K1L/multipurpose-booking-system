@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.8 - Registration
+3.9 - Login
 
-Phase 3.8 registration is implemented; verification results are recorded below. Existing authentication and session behavior is preserved.
+Phase 3.9 password login is implemented; verification results are recorded below. Existing registration and OAuth behavior is preserved.
 
 The next implementation step, requiring separate authorization, is:
 
-3.9 - Login
+3.10 - Logout + Session Revocation
 
 ---
 
@@ -454,7 +454,7 @@ The following remain intentionally incomplete:
 
 - application session HTTP/cookie integration
 - email verification delivery
-- login
+- logout/session HTTP termination
 - logout
 - current-user endpoint
 - authentication middleware
@@ -640,7 +640,7 @@ Current Phase 3 sequence:
 3.6  Authentication Service Layer                   COMPLETE
 3.7  Session / Token Management                     COMPLETE
 3.8  Registration                                   COMPLETE
-3.9  Login                                          PENDING
+3.9  Login                                          COMPLETE
 3.10 Logout + Session Revocation                    PENDING
 3.11 Authentication Middleware                      PENDING
 3.12 /me / Current User                             PENDING
@@ -655,7 +655,7 @@ Current Phase 3 sequence:
 
 The next implementation step, requiring separate authorization, is:
 
-## PHASE 3.9 - Login
+## PHASE 3.10 - Logout + Session Revocation
 
 The implemented authentication service is the application-level boundary that unifies:
 
@@ -677,7 +677,7 @@ It will remain separate from:
 - booking permissions
 - RBAC implementation
 
-Registration and the application session mechanism are implemented. Password login is the next separately authorized step.
+Registration, password login, and session creation are implemented. Logout is the next separately authorized step.
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.9 login, after separate authorization.
+Next task: Phase 3.10 logout, after separate authorization.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -765,3 +765,23 @@ Next task: Phase 3.9 login, after separate authorization.
 - No migration or new dependency. See REGISTRATION.md for the full API, configuration,
   verification policy, and the per-process rate limiter's deployment limitations.
 - Stop before Phase 3.9 login; middleware, /me, RBAC, and email delivery remain deferred.
+
+## Phase 3.9 Implementation and Verification (2026-10-02)
+
+- Implemented POST /api/v1/auth/login and /login UI, composing the existing password
+  authentication and session services. Registration and OAuth runtime behavior remain.
+- Login returns a fresh HttpOnly, SameSite=Lax, host-only session cookie. HTTPS origins
+  use Secure and the __Host- prefix; plain HTTP is allowed only for loopback development.
+- Exact Origin checks, JSON/body bounds, generic 401 errors, safe logs, peer-based
+  rate limits, and bounded concurrent password operations protect the login endpoint.
+- Missing/passwordless accounts perform dummy Argon2id work. Stored password hash
+  parameters and component lengths are bounded before verification to fail safely.
+- Passed: full database-enabled `go test ./... -count=1`, gofmt, `go build ./...`,
+  `go vet ./...`, frontend ESLint, and Next.js production build including TypeScript.
+- Live smoke verification passed for actual registration, login, cookie flags, stored
+  session hash, wrong-password rejection, login page, and cleanup of the temporary account.
+- Browser automation could not initialize, so visual/interactive browser QA is not claimed.
+- No schema migration or dependency. See LOGIN.md for cookie, origin, deployment, and
+  inherited unverified-email limitations. Existing multiple sessions remain valid.
+- Next: Phase 3.10 logout. No logout endpoint, authentication middleware, /me, RBAC,
+  or OAuth callback HTTP wiring was implemented in this step.

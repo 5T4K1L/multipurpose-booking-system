@@ -46,8 +46,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = authenticationService
-	_ = sessionService
 
 	mux := http.NewServeMux()
 	webOrigin := os.Getenv("WEB_ORIGIN")
@@ -56,6 +54,11 @@ func main() {
 	}
 	registrationService := service.NewRegistrationService(repository.NewRegistrationTransactions(dbPool))
 	mux.Handle("/api/v1/auth/register", server.NewRegistrationHandler(registrationService, webOrigin, nil))
+	loginHandler, err := server.NewLoginHandler(service.NewLoginService(authenticationService, sessionService), webOrigin, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mux.Handle("/api/v1/auth/login", loginHandler)
 
 	// Register the API health endpoint.
 	mux.HandleFunc("/health", server.HealthHandler)

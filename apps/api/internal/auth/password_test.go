@@ -1,6 +1,23 @@
 package auth
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestVerifyPasswordRejectsCorruptParameters(t *testing.T) {
+	for _, parameters := range []string{"m=65536,t=0,p=4", "m=65536,t=3,p=0", "m=4294967295,t=3,p=4", "m=65536,t=999,p=4", "m=1,t=3,p=4"} {
+		hash := "$argon2id$v=19$" + parameters + "$MDEyMzQ1Njc4OWFiY2RlZg$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		if ok, err := VerifyPassword("password", hash); err == nil || ok {
+			t.Fatal("corrupt hash accepted")
+		}
+	}
+	for _, hash := range []string{strings.Repeat("a", 513), "$argon2id$v=19$m=65536,t=3,p=4$$"} {
+		if ok, err := VerifyPassword("password", hash); err == nil || ok {
+			t.Fatal("malformed hash accepted")
+		}
+	}
+}
 
 func TestHashPassword(t *testing.T) {
 	password := "CorrectHorseBatteryStaple"

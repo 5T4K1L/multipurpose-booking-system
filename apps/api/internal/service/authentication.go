@@ -86,6 +86,7 @@ func (s *AuthenticationService) AuthenticatePassword(ctx context.Context, email,
 		}
 		user, err := store.GetUserByEmail(ctx, email)
 		if errors.Is(err, ErrNotFound) {
+			verifyMissingCredential(password)
 			return db.User{}, ErrInvalidCredentials
 		}
 		if err != nil {
@@ -93,6 +94,7 @@ func (s *AuthenticationService) AuthenticatePassword(ctx context.Context, email,
 		}
 		credential, err := store.GetUserCredential(ctx, user.ID)
 		if errors.Is(err, ErrNotFound) {
+			verifyMissingCredential(password)
 			return db.User{}, ErrInvalidCredentials
 		}
 		if err != nil {

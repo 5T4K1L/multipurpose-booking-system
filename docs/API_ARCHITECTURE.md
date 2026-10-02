@@ -939,9 +939,11 @@ Authentication and session services are implemented. Phase 3.8 adds registration
 through POST /api/v1/auth/register and the web /register form. See
 [Registration](REGISTRATION.md) for the contract and unverified-email policy.
 
-Remaining Phase 3 integration includes:
+Phase 3.9 adds POST /api/v1/auth/login with HttpOnly session-cookie delivery and the
+web /login form. See [Login](LOGIN.md) for origin checks, CORS, cookie security, and
+safe credential failures.
 
-- password login
+Remaining Phase 3 integration includes:
 - logout and revocation
 - authentication middleware
 - `/me`

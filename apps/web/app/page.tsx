@@ -34,6 +34,7 @@ export default function Home() {
           API status: <strong>{apiStatus}</strong>
         </p>
         <Link href="/register" className="mt-6 inline-block rounded-lg bg-blue-700 px-5 py-3 text-white">Create account</Link>
+        <Link href="/login" className="ml-4 inline-block px-3 py-3 underline underline-offset-4">Sign in</Link>
       </div>
     </main>
   );

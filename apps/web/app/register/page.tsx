@@ -70,6 +70,7 @@ export default function RegisterPage() {
           <button disabled={pending} className="min-h-12 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-60">{pending ? "Submitting…" : "Create account"}</button>
           <p role={failed ? "alert" : "status"} className="min-h-6 text-sm">{message}</p>
         </form>
+        <p className="mt-6 text-sm">Already have an account? <Link href="/login" className="underline underline-offset-4">Sign in</Link></p>
       </section>
     </main>
   );

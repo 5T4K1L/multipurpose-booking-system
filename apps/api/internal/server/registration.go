@@ -9,10 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"mime"
-	"net"
 	"net/http"
-	"net/netip"
-	"sync"
 	"time"
 
 	"multipurpose-booking-system/api/internal/service"
@@ -21,62 +18,19 @@ import (
 type registrar interface {
 	Register(context.Context, service.RegistrationInput) error
 }
-type registrationWindow struct {
-	count int
-	until time.Time
-}
 type RegistrationHandler struct {
+	attemptLimiter
 	registration registrar
 	origin       string
 	logger       *slog.Logger
-	mu           sync.Mutex
-	windows      map[string]registrationWindow
 	slots        chan struct{}
-	now          func() time.Time
 }
 
 func NewRegistrationHandler(registration registrar, origin string, logger *slog.Logger) *RegistrationHandler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &RegistrationHandler{registration: registration, origin: origin, logger: logger, windows: make(map[string]registrationWindow), slots: make(chan struct{}, 2), now: time.Now}
-}
-
-// Only the transport peer is trusted. Forwarded headers cannot bypass this limiter.
-func (h *RegistrationHandler) allow(peer string) bool {
-	host, _, err := net.SplitHostPort(peer)
-	if err != nil {
-		host = peer
-	}
-	address, err := netip.ParseAddr(host)
-	if err != nil {
-		host = "unknown"
-	} else {
-		host = address.Unmap().String()
-	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	now := h.now()
-	window, exists := h.windows[host]
-	if !exists && len(h.windows) >= 10000 {
-		for key, value := range h.windows {
-			if !now.Before(value.until) {
-				delete(h.windows, key)
-			}
-		}
-		if len(h.windows) >= 10000 {
-			return false
-		}
-	}
-	if !now.Before(window.until) {
-		window = registrationWindow{until: now.Add(15 * time.Minute)}
-	}
-	if window.count >= 5 {
-		return false
-	}
-	window.count++
-	h.windows[host] = window
-	return true
+	return &RegistrationHandler{attemptLimiter: newAttemptLimiter(5), registration: registration, origin: origin, logger: logger, slots: make(chan struct{}, 2)}
 }
 
 func (h *RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

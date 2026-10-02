@@ -990,3 +990,11 @@ but does not delete an already-resolved or newly-created OAuth account.
 
 No HTTP/cookie integration, registration/login/logout endpoints, middleware, /me, RBAC,
 sliding expiry, refresh tokens, or background session cleanup is added in Phase 3.7.
+
+## Phase 3.9 Login Boundary
+
+Password login now delivers the shared application session through a protected
+HttpOnly cookie. Exact Origin and JSON checks protect the login operation; generic
+authentication failures and bounded password work reduce abuse and enumeration risks.
+See [Login](LOGIN.md) for configuration, cookies, and verification. OAuth callback HTTP
+wiring, logout endpoints, authentication middleware, /me, and RBAC remain deferred.

@@ -54,6 +54,9 @@ func HashPassword(password string) (string, error) {
 
 // VerifyPassword checks if the provided password matches the stored hash
 func VerifyPassword(password string, encodedHash string) (bool, error) {
+	if len(encodedHash) > 512 {
+		return false, fmt.Errorf("invalid hash length")
+	}
 	parts := strings.Split(encodedHash, "$")
 
 	if len(parts) != 6 || parts[1] != "argon2id" || parts[2] != "v=19" {
@@ -67,6 +70,10 @@ func VerifyPassword(password string, encodedHash string) (bool, error) {
 	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &time, &threads); err != nil {
 		return false, fmt.Errorf("failed to parse hash parameters: %w", err)
 	}
+	// Reject corrupt or excessive stored parameters before invoking Argon2id.
+	if threads == 0 || threads > 16 || time == 0 || time > 10 || memory < 8*uint32(threads) || memory > 256*1024 {
+		return false, fmt.Errorf("invalid hash parameters")
+	}
 
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
@@ -76,6 +83,9 @@ func VerifyPassword(password string, encodedHash string) (bool, error) {
 	expectedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
 		return false, fmt.Errorf("failed to decode hash: %w", err)
+	}
+	if len(salt) < 8 || len(salt) > 64 || len(expectedHash) < 16 || len(expectedHash) > 64 {
+		return false, fmt.Errorf("invalid hash component length")
 	}
 
 	// Recalculate the hash using the stored parameters

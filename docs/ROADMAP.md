@@ -608,6 +608,11 @@ Registration must not expose unnecessary account-existence information.
 
 # Phase 3.9 — Login
 
+## Status
+
+IMPLEMENTED - password login API, secure session-cookie delivery, and login form.
+See LOGIN.md for security policy and phase boundaries.
+
 ## Objective
 
 Implement password-based login.
@@ -1315,13 +1320,13 @@ PHASE 3 — Authentication + Authorization
 The most recent completed development milestone is:
 
 ```text id="d7e8f9"
-PHASE 3.8 - Registration
+PHASE 3.9 - Login
 ```
 
 The next implementation milestone is:
 
 ```text id="g0h1i2"
-PHASE 3.9 - Login
+PHASE 3.10 - Logout + Session Revocation
 ```
 
 The next phase after Phase 3 remains:
