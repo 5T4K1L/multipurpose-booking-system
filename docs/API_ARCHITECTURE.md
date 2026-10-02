@@ -946,8 +946,11 @@ safe credential failures.
 Phase 3.10 adds POST /api/v1/auth/logout and the web /logout page. See
 [Logout](LOGOUT.md) for revocation, cookie expiration, and retry behavior.
 
+Phase 3.11 adds route-scoped authentication middleware and trusted local identity
+context. See [Authentication middleware](AUTHENTICATION_MIDDLEWARE.md). Existing
+public routes remain unwrapped; Phase 3.12 will introduce the first protected endpoint.
+
 Remaining Phase 3 integration includes:
-- authentication middleware
 - `/me`
 - RBAC enforcement
 - end-to-end OAuth route integration

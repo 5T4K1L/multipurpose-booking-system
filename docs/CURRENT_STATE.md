@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.10 - Logout + Session Revocation
+3.11 - Authentication Middleware
 
-Phase 3.10 logout is implemented; verification results are recorded below. Existing registration, login, and OAuth behavior is preserved.
+Phase 3.11 authentication middleware is implemented and verified. Existing public routes and OAuth behavior are preserved.
 
 The next implementation step, requiring separate authorization, is:
 
-3.11 - Authentication Middleware
+3.12 - /auth/me
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.11 authentication middleware, after separate authorization.
+Next task: Phase 3.12 /auth/me, after separate authorization.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -806,3 +806,24 @@ Next task: Phase 3.11 authentication middleware, after separate authorization.
 - Browser automation could not initialize; interactive/visual browser QA remains unverified.
 - No schema or dependency changes. See LOGOUT.md for API and deployment details.
 - Stop at Phase 3.10. Next: Phase 3.11 authentication middleware; /me and RBAC remain deferred.
+
+## Phase 3.11 Implementation and Verification (2026-10-02)
+
+- Added route-scoped AuthenticationMiddleware.Require and IdentityFromContext.
+  The middleware accepts only the configured application session cookie and uses
+  SessionService.Validate to check persisted session and account state.
+- Protected handlers receive a value-copy identity containing the local UserID,
+  set with an unexported context key. Headers, query/body user IDs, bearer headers,
+  and previously attached identity cannot override the validated local user.
+- Missing/empty/duplicate cookies and invalid sessions receive generic 401 responses;
+  validation storage/commit errors receive 503. No failed validation invokes next.
+- Validation has a 10-second timeout; downstream handlers retain the original
+  request context. No session cookies or raw credentials are emitted or logged.
+- Database integration verifies trusted identity, last-seen updates without expiry
+  extension, disabled accounts, expired/unknown sessions, and denial after logout.
+- Passed gofmt, full database-enabled go test ./... -count=1, go build ./..., and
+  go vet ./.... No frontend, schema, dependency, or public route changes.
+- Middleware is exercised through protected test handlers; the first production
+  protected endpoint, /auth/me, belongs to Phase 3.12. See AUTHENTICATION_MIDDLEWARE.md.
+- CORS/preflight, mutation CSRF checks, and resource authorization remain separate
+  responsibilities. This step does not implement /auth/me, RBAC, or OAuth routes.
