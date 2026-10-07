@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.12 - /auth/me
+3.13 - RBAC / Authorization
 
-Phase 3.12 current-account endpoint and account page are implemented and verified. Existing authentication behavior is preserved.
+Phase 3.13 role authorization is implemented and verified. Existing authentication behavior is preserved.
 
 The next implementation step, requiring separate authorization, is:
 
-3.13 - RBAC / Authorization
+3.14 - Authentication Security Tests
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.13 RBAC / Authorization, after separate authorization.
+Next task: Phase 3.14 authentication security tests, after separate authorization.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -846,3 +846,26 @@ Next task: Phase 3.13 RBAC / Authorization, after separate authorization.
   initialize, so visual/interactive browser QA remains unverified.
 - No schema, dependency, or manual configuration changes. See CURRENT_ACCOUNT.md.
 - Stop at Phase 3.12. Next: Phase 3.13 RBAC / Authorization.
+
+## Phase 3.13 Implementation and Verification (2026-10-07)
+
+- Completed the existing in-progress authorization service, repository, middleware,
+  query, and migration. RequireRoles runs after trusted authentication; /auth/me
+  now requires the CUSTOMER baseline while preserving its response contract.
+- Active local accounts have baseline CUSTOMER access. PLATFORM_ADMIN and
+  PLATFORM_OPERATOR require explicit persisted grants, with no hierarchy or bypass.
+- All seven role names are defined. Business roles deliberately deny access until
+  Phase 4 provides trusted membership/tenant context; no global business grants exist.
+- Role state is loaded per authorization decision; grant removal and account
+  disablement take effect on subsequent requests without session renewal.
+- RequireOwner provides a separate equality check for trusted persisted ownership;
+  future resource services must invoke it or equivalent membership-aware policy.
+- Migration 000007 creates constrained user_platform_roles; applied locally through
+  the normal runner. No existing account received an elevated grant.
+- Passed gofmt, sqlc generation, full database-enabled go test ./... -count=1,
+  go build ./..., go vet ./..., and live login/account/logout smoke verification.
+- Tests cover role decisions, policy spoofing, safe errors, ownership, persisted
+  grants/removal, disabled users, and invalid/duplicate role constraints.
+- No frontend or dependency changes. No role-management HTTP endpoint. See RBAC.md.
+- Stop at Phase 3.13; next is Phase 3.14 Authentication Security Tests. Business
+  membership authorization and tenant integration remain Phase 4 work.

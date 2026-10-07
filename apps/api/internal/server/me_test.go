@@ -25,7 +25,7 @@ func TestMeContract(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			stub := &validatorStub{user: db.User{ID: 42, Email: "member@example.com", Username: "Member", Status: "active"}, err: tc.err}
-			h, err := NewMeHandler(stub, "http://localhost:3000", nil)
+			h, err := NewMeHandler(stub, &authorizerStub{}, "http://localhost:3000", nil)
 			if err != nil {
 				t.Fatal(err)
 			}

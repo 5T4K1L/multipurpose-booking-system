@@ -952,8 +952,11 @@ public routes remain unwrapped. Phase 3.12 adds GET /api/v1/auth/me as the first
 protected endpoint, returning safe local account details to /account. See
 [Current account](CURRENT_ACCOUNT.md).
 
+Phase 3.13 adds server-defined role policies and a CUSTOMER baseline gate on
+/auth/me. Platform grants are persisted; business policies deny pending Phase 4
+memberships. See [RBAC](RBAC.md).
+
 Remaining Phase 3 integration includes:
-- RBAC enforcement
 - end-to-end OAuth route integration
 - authentication UI
 - security verification

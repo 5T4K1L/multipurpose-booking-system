@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"multipurpose-booking-system/api/internal/db"
 	"multipurpose-booking-system/api/internal/repository"
 	"multipurpose-booking-system/api/internal/service"
 	"net/http"
@@ -48,7 +49,7 @@ func TestMeIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	protected, err := NewMeHandler(sessions, "http://localhost:3000", nil)
+	protected, err := NewMeHandler(sessions, service.NewAuthorizationService(repository.NewAuthorizationRepository(db.New(pool))), "http://localhost:3000", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

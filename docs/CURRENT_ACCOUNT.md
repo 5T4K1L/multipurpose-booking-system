@@ -9,7 +9,8 @@ GET `/api/v1/auth/me` returns the currently authenticated local application user
 The three fields are an explicit allowlist. Status, timestamps, password hashes,
 session tokens, OAuth tokens, and private authentication records are not returned.
 Email is not a claim of mailbox verification. This endpoint grants no tenant or
-resource authorization and makes no role claims.
+resource authorization and makes no role claims. Phase 3.13 applies a CUSTOMER
+baseline gate after authentication; every active local account has this baseline.
 
 The Phase 3.11 middleware validates the application session cookie, checks current
 account state, and commits last-seen before calling the handler. The safe profile
@@ -18,7 +19,8 @@ a second lookup. Client headers, query parameters, and IDs do not select the use
 The public IdentityFromContext accessor still returns only UserID.
 
 Missing/invalid/expired/revoked sessions and disabled accounts return generic 401.
-Database or commit errors return 503. No-store applies to successful and failed
+Database or commit errors return 503. Authorization denial returns 403;
+authorization storage failures return 503. No-store applies to successful and failed
 responses; no new session or cookie is issued. Absolute expiration remains unchanged.
 
 Credentialed CORS allows only WEB_ORIGIN. OPTIONS preflight runs before authentication
@@ -38,4 +40,4 @@ account request returns 401. The API remains at http://localhost:8080.
 
 Verified with the full database-enabled Go suite, build/vet/gofmt, frontend lint and
 production build, and live login/account/logout smoke testing. Browser automation
-could not initialize; interactive/visual QA is unverified. RBAC is Phase 3.13.
+could not initialize; interactive/visual QA is unverified. See RBAC.md for the Phase 3.13 authorization layer.

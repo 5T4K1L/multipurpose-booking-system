@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"log/slog"
+	"multipurpose-booking-system/api/internal/service"
 	"net/http"
 )
 
@@ -16,12 +17,12 @@ type currentUserContextKey struct{}
 
 // NewMeHandler puts method/CORS handling outside authentication so preflight
 // requires no session. Missing Origin is allowed for same-origin/non-browser GETs.
-func NewMeHandler(sessions sessionValidator, origin string, logger *slog.Logger) (http.Handler, error) {
+func NewMeHandler(sessions sessionValidator, authorization roleAuthorizer, origin string, logger *slog.Logger) (http.Handler, error) {
 	middleware, err := NewAuthenticationMiddleware(sessions, origin, logger)
 	if err != nil {
 		return nil, err
 	}
-	protected := middleware.Require(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	protected := middleware.Require(RequireRoles(authorization, logger, service.RoleCustomer)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity, ok := IdentityFromContext(r.Context())
 		user, present := r.Context().Value(currentUserContextKey{}).(currentUser)
 		w.Header().Set("Content-Type", "application/json")
@@ -33,7 +34,7 @@ func NewMeHandler(sessions sessionValidator, origin string, logger *slog.Logger)
 		_ = json.NewEncoder(w).Encode(struct {
 			User currentUser `json:"user"`
 		}{User: user})
-	}))
+	})))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Add("Vary", "Origin")

@@ -34,6 +34,12 @@ type UserOauthIdentity struct {
 	UpdatedAt       pgtype.Timestamp
 }
 
+type UserPlatformRole struct {
+	UserID    int64
+	Role      string
+	CreatedAt pgtype.Timestamp
+}
+
 type UserSession struct {
 	ID         int64
 	UserID     int64

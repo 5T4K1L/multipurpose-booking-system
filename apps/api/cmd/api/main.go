@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"multipurpose-booking-system/api/internal/database"
+	"multipurpose-booking-system/api/internal/db"
 	"multipurpose-booking-system/api/internal/migrations"
 	"multipurpose-booking-system/api/internal/repository"
 	"multipurpose-booking-system/api/internal/server"
@@ -64,7 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 	mux.Handle("/api/v1/auth/logout", logoutHandler)
-	meHandler, err := server.NewMeHandler(sessionService, webOrigin, nil)
+	meHandler, err := server.NewMeHandler(sessionService, service.NewAuthorizationService(repository.NewAuthorizationRepository(db.New(dbPool))), webOrigin, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
