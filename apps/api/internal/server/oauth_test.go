@@ -192,16 +192,17 @@ func TestOAuthRoutesSignedProviderFlow(t *testing.T) {
 func TestOAuthRoutesRejectInvalidCallbacks(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
+		outcome  string
 		mutate   func(url.Values)
 		badNonce bool
 		loginErr error
 	}{
-		{name: "state", mutate: func(v url.Values) { v.Set("state", "attacker") }},
-		{name: "duplicate", mutate: func(v url.Values) { v.Add("code", "other") }},
-		{name: "provider error", mutate: func(v url.Values) { v.Set("error", "private-provider-error") }},
-		{name: "nonce", badNonce: true},
-		{name: "email linking", loginErr: service.ErrLinkRequired},
-		{name: "storage", loginErr: errors.New("private-storage-error")},
+		{name: "state", outcome: "transaction_invalid", mutate: func(v url.Values) { v.Set("state", "attacker") }},
+		{name: "duplicate", outcome: "duplicate_parameter", mutate: func(v url.Values) { v.Add("code", "other") }},
+		{name: "provider error", outcome: "provider_denied_or_missing_code", mutate: func(v url.Values) { v.Set("error", "private-provider-error") }},
+		{name: "nonce", outcome: "id_token_validation_failed", badNonce: true},
+		{name: "email linking", outcome: "explicit_link_required", loginErr: service.ErrLinkRequired},
+		{name: "storage", outcome: "local_authentication_unavailable", loginErr: errors.New("private-storage-error")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			login := &oauthLoginStub{err: tc.loginErr}
@@ -216,6 +217,9 @@ func TestOAuthRoutesRejectInvalidCallbacks(t *testing.T) {
 			}
 			if tc.loginErr == nil && login.calls != 0 {
 				t.Fatal("invalid identity reached login")
+			}
+			if !strings.Contains(f.logs.String(), "outcome="+tc.outcome) || strings.Contains(rec.Body.String(), tc.outcome) {
+				t.Fatal("diagnostic code missing or exposed to browser")
 			}
 			if strings.Contains(f.logs.String()+rec.Body.String(), "private-") {
 				t.Fatal("private error exposed")

@@ -226,37 +226,37 @@ func (h *OAuthRoutes) Callback(w http.ResponseWriter, r *http.Request, p auth.OA
 	}
 	http.SetCookie(w, h.cookie(p, "", true))
 	if !h.allow(r.RemoteAddr) {
-		fail("unavailable")
+		fail("rate_limited")
 		return
 	}
 	var values url.Values
 	if p == auth.OAuthProviderApple {
 		media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if err != nil || media != "application/x-www-form-urlencoded" {
-			fail("failed")
+			fail("invalid_content_type")
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if r.ParseForm() != nil {
-			fail("failed")
+			fail("invalid_form")
 			return
 		}
 		values = r.PostForm
 	} else {
 		if len(r.URL.RawQuery) > 8192 {
-			fail("failed")
+			fail("query_too_large")
 			return
 		}
 		var err error
 		values, err = url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			fail("failed")
+			fail("invalid_query")
 			return
 		}
 	}
 	for _, key := range []string{"state", "code", "error"} {
 		if len(values[key]) > 1 {
-			fail("failed")
+			fail("duplicate_parameter")
 			return
 		}
 	}
@@ -269,38 +269,38 @@ func (h *OAuthRoutes) Callback(w http.ResponseWriter, r *http.Request, p auth.OA
 		}
 	}
 	if count != 1 || len(value) > 4096 {
-		fail("failed")
+		fail("missing_or_duplicate_cookie")
 		return
 	}
 	tx, err := h.codec.Decode(value, time.Now())
 	if err != nil || tx.Provider != p || !auth.ValidateOAuthState(tx.State, values.Get("state")) {
-		fail("failed")
+		fail("transaction_invalid")
 		return
 	}
 	if !h.consume(value) {
-		fail("failed")
+		fail("transaction_used_or_expired")
 		return
 	}
 	if values.Get("error") != "" || values.Get("code") == "" {
-		fail("failed")
+		fail("provider_denied_or_missing_code")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 	identity, err := h.verify(ctx, cfg, values.Get("code"), tx)
 	if err != nil {
-		fail("failed")
+		fail(oauthVerificationOutcome(err))
 		return
 	}
 	issued, err := h.login.LoginOAuth(ctx, identity)
 	if err != nil {
 		// Do not disclose whether an email matches an existing account or is disabled.
-		fail("failed")
+		fail(oauthAccountOutcome(err))
 		return
 	}
 	raw, err := base64.RawURLEncoding.Strict().DecodeString(issued.Token)
 	if err != nil || len(raw) != 32 || len(issued.Token) != 43 || !issued.ExpiresAt.After(time.Now()) {
-		fail("unavailable")
+		fail("invalid_issued_session")
 		return
 	}
 	age := int(time.Until(issued.ExpiresAt).Seconds())
@@ -314,15 +314,44 @@ func (h *OAuthRoutes) Callback(w http.ResponseWriter, r *http.Request, p auth.OA
 func (h *OAuthRoutes) verify(ctx context.Context, cfg auth.OAuthProviderConfig, code string, tx auth.OAuthTransaction) (auth.OAuthIdentity, error) {
 	token, err := auth.ExchangeOAuthCode(ctx, cfg, code, tx.PKCEVerifier)
 	if err != nil {
-		return auth.OAuthIdentity{}, err
+		return auth.OAuthIdentity{}, errOAuthExchange
 	}
 	verifier, err := auth.NewOIDCVerifier(h.client, cfg.JWKSURL, cfg.Issuer, cfg.ClientID, tx.Nonce, []jose.SignatureAlgorithm{jose.RS256})
 	if err != nil {
-		return auth.OAuthIdentity{}, err
+		return auth.OAuthIdentity{}, errOAuthTokenValidation
 	}
 	claims, err := verifier.Verify(ctx, token.IDToken, time.Now())
 	if err != nil {
-		return auth.OAuthIdentity{}, err
+		return auth.OAuthIdentity{}, errOAuthTokenValidation
 	}
 	return auth.NormalizeOIDCIdentity(cfg.Provider, claims)
+}
+
+var errOAuthExchange = errors.New("oauth token exchange failed")
+var errOAuthTokenValidation = errors.New("oauth id token validation failed")
+
+func oauthVerificationOutcome(err error) string {
+	if errors.Is(err, errOAuthExchange) {
+		return "token_exchange_failed"
+	}
+	if errors.Is(err, errOAuthTokenValidation) {
+		return "id_token_validation_failed"
+	}
+	return "identity_normalization_failed"
+}
+func oauthAccountOutcome(err error) string {
+	switch {
+	case errors.Is(err, service.ErrLinkRequired):
+		return "explicit_link_required"
+	case errors.Is(err, service.ErrAccountCreationRequired):
+		return "account_creation_disabled"
+	case errors.Is(err, service.ErrAccountDisabled):
+		return "account_disabled"
+	case errors.Is(err, service.ErrInvalidIdentity):
+		return "invalid_local_identity"
+	case errors.Is(err, service.ErrLinkConflict):
+		return "identity_ownership_conflict"
+	default:
+		return "local_authentication_unavailable"
+	}
 }
