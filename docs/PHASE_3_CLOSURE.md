@@ -96,3 +96,11 @@ Live Google is the user's chosen next step. Live Apple and interactive browser Q
 remain unverified, as does the previously documented race-detector check. This
 update does not close Phase 3 or start Phase 4. OAUTH_SETUP.md is the current setup
 contract; the earlier missing-route description above records the original finding.
+
+## Live Google result ? 2026-10-07
+
+The user confirmed successful Google sign-in and the server logged an accepted
+callback. Local Google live verification is complete. Windows time synchronization
+resolved the earlier future-issued-token failure; no validation bypass was added.
+Apple live verification remains pending. This does not claim automated browser QA,
+race detection, production readiness, or Phase 3 closure.

@@ -104,3 +104,13 @@ Real Google/Apple consent and callback round trips need credentials and manual
 provider setup. Browser automation remains unavailable from the prior closure
 review, so interactive visual QA is not claimed. Phase 3 stays open until the
 remaining live verification and closure review are resolved. Phase 4 is not started.
+
+## Live verification update ? 2026-10-07
+
+Google sign-in was confirmed working by the user and the API logged an accepted
+Google callback. An initial future-issued-token rejection was traced to Windows
+clock skew. Enabling/configuring Windows Time and synchronizing the clock resolved
+it without relaxing token validation. If this recurs, inspect the server's safe
+outcome code and Windows synchronization status before changing authentication rules.
+Apple remains disabled and has not been live-verified. Earlier statements above
+about pending Google verification describe the setup stage, now completed locally.

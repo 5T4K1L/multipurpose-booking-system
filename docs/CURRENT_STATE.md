@@ -928,3 +928,16 @@ Next task: live Google setup/verification, then Apple and closure review; Phase 
 - User selected Google-first setup. See OAUTH_SETUP.md for exact callback and credential
   inventory. Live Google/Apple and visual browser verification remain outstanding.
 - No schema/dependency changes; Phase 3 remains open and Phase 4 has not started.
+
+## Live Google verification (2026-10-07)
+
+- User confirmed Google sign-in works; the local API recorded provider=google,
+  outcome=accepted. Live Google consent/callback/session completion is verified.
+- Earlier failures were id_token_future_issued. Windows Time was disabled, then
+  unsynchronized; after NTP configuration it synchronized and the login succeeded.
+  Token validation was not weakened. Safe diagnostic categories were added.
+- Local frontend and Google-enabled API now run as hidden background processes.
+  Secrets remain outside Git; the launcher reads the user's local credential file.
+- Apple remains disabled and live-unverified. Automated browser QA and race-detector
+  verification remain outstanding. Phase 3 closure still requires review of these
+  remaining limits; Phase 4 has not started.
