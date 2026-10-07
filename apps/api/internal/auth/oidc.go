@@ -60,8 +60,8 @@ func (c OIDCClaims) Validate(
 		return fmt.Errorf("invalid OIDC audience")
 	}
 
-	// When multiple audiences are present, azp must identify this client.
-	if len(c.Audience) > 1 && c.AuthorizedParty != expectedAudience {
+	// Multiple audiences require azp; whenever supplied, it must identify this client.
+	if (len(c.Audience) > 1 || c.AuthorizedParty != "") && c.AuthorizedParty != expectedAudience {
 		return fmt.Errorf("invalid OIDC authorized party")
 	}
 

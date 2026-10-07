@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.13 - RBAC / Authorization
+3.14 - Authentication Security Tests
 
-Phase 3.13 role authorization is implemented and verified. Existing authentication behavior is preserved.
+Phase 3.14 security regression testing is complete with verification limits recorded below. Phase 3 is not yet closed.
 
 The next implementation step, requiring separate authorization, is:
 
-3.14 - Authentication Security Tests
+3.15 - Phase 3 Closure Review
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.14 authentication security tests, after separate authorization.
+Next task: Phase 3.15 closure review, after separate authorization.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -869,3 +869,22 @@ Next task: Phase 3.14 authentication security tests, after separate authorizatio
 - No frontend or dependency changes. No role-management HTTP endpoint. See RBAC.md.
 - Stop at Phase 3.13; next is Phase 3.14 Authentication Security Tests. Business
   membership authorization and tenant integration remain Phase 4 work.
+
+## Phase 3.14 Security Verification (2026-10-07)
+
+- Added signed-token negative tests for issuer, audience, nonce, expiry boundary,
+  future issuance/not-before, subject, and authorized-party validation.
+- Found and fixed single-audience OIDC tokens accepting an azp naming another client.
+  Regression initially failed and now passes; optional/matching azp remains accepted.
+- Added exact S256 challenge binding, transaction-secret freshness, and exact exchange
+  verifier assertions; fuzzed encrypted OAuth cookie decoding for 10 seconds:
+  59,257 executions passed without returning partial identity on invalid input.
+- Added concurrent limiter accounting, canonical IPv4/mapped-IPv6 peers, expiry,
+  bounded map/pruning, forwarding-header spoofing, and uniform login failure tests.
+- Existing suite covers password hashing, enumeration, sessions/logout, OAuth state,
+  identity ownership/linking, RBAC, trusted context, ownership and safe error/log output.
+- Full database-enabled Go tests, build, vet, and formatting passed. Race detection
+  could not run: CGO is disabled and no C compiler is available on PATH.
+- See SECURITY_TESTS.md for evidence and limits. No frontend/schema/dependency changes.
+- Phase 3.15 must review the remaining OAuth HTTP/provider integration and browser QA
+  gaps before claiming Phase 3 closure. Phase 4 tenant isolation is not yet implemented.

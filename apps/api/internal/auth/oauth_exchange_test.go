@@ -88,8 +88,8 @@ func TestExchangeOAuthCode(t *testing.T) {
 			}
 		}
 
-		if values.Get("code_verifier") == "" {
-			t.Fatal("expected PKCE verifier")
+		if values.Get("code_verifier") != "test-pkce-verifier" {
+			t.Fatal("token exchange did not use the transaction PKCE verifier")
 		}
 
 		if values.Get("redirect_uri") != "https://example.com/callback" {

@@ -1320,13 +1320,13 @@ PHASE 3 — Authentication + Authorization
 The most recent completed development milestone is:
 
 ```text id="d7e8f9"
-PHASE 3.13 - RBAC / Authorization
+PHASE 3.14 - Authentication Security Tests
 ```
 
 The next implementation milestone is:
 
 ```text id="g0h1i2"
-PHASE 3.14 - Authentication Security Tests
+PHASE 3.15 - Phase 3 Closure Review
 ```
 
 The next phase after Phase 3 remains:
