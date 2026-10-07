@@ -77,7 +77,7 @@ func ValidateAppleIDToken(
 		clientID,
 		expectedNonce,
 		[]jose.SignatureAlgorithm{
-			jose.ES256,
+			jose.RS256,
 		},
 	)
 	if err != nil {

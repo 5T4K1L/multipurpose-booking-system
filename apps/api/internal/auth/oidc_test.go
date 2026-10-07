@@ -98,3 +98,17 @@ func TestOIDCClaimsValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestOIDCEmailVerifiedWireValues(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+		valid bool
+	}{{"true", true, true}, {`"true"`, true, true}, {"false", false, true}, {`"false"`, false, true}, {"null", false, true}, {`"yes"`, false, false}, {"1", false, false}} {
+		var claims OIDCClaims
+		err := claims.UnmarshalJSON([]byte(`{"email_verified":` + tc.value + `,"sub":"subject"}`))
+		if (err == nil) != tc.valid || (tc.valid && (claims.EmailVerified != tc.want || claims.Subject != "subject")) {
+			t.Fatalf("claim %s failed", tc.value)
+		}
+	}
+}

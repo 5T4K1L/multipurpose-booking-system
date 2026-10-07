@@ -67,6 +67,10 @@ func ExchangeOAuthCode(
 		Scopes:      config.Scopes,
 	}
 
+	if config.Provider == OAuthProviderApple {
+		oauthConfig.Endpoint.AuthStyle = oauth2.AuthStyleInParams
+	}
+
 	token, err := oauthConfig.Exchange(
 		ctx,
 		code,

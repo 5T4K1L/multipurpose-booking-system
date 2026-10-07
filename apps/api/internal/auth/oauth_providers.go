@@ -48,7 +48,6 @@ func AppleOAuthConfig(
 		ApplePrivateKeyPEM:  privateKeyPEM,
 		AppleSecretValidity: 24 * time.Hour,
 		Scopes: []string{
-			"openid",
 			"email",
 			"name",
 		},

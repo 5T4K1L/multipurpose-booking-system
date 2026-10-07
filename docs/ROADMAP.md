@@ -1326,7 +1326,7 @@ PHASE 3.14 - Authentication Security Tests
 The next implementation milestone is:
 
 ```text id="g0h1i2"
-PHASE 3.15 - Closure review OPEN: complete OAuth integration and verification
+PHASE 3.15 - Closure review OPEN: live OAuth setup and verification
 ```
 
 The next phase after Phase 3 remains:

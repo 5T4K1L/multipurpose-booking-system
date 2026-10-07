@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import OAuthButtons from "./oauth-buttons";
 import { useState, type FormEvent } from "react";
 
 export default function LoginPage() {
@@ -64,6 +65,7 @@ export default function LoginPage() {
           <button disabled={pending} className="min-h-12 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-60">{pending ? "Signing in…" : "Sign in"}</button>
           <p role={failed ? "alert" : "status"} className="min-h-6 text-sm">{message}</p>
         </form>
+        <OAuthButtons />
         <p className="mt-6 text-sm">New here? <Link href="/register" className="underline underline-offset-4">Create an account</Link></p>
         <p className="mt-4 text-sm"><Link href="/logout" className="underline underline-offset-4">Sign out</Link></p>
         <p className="mt-4 text-sm"><Link href="/account" className="underline underline-offset-4">Your account</Link></p>

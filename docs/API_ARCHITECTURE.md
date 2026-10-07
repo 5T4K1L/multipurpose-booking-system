@@ -957,8 +957,8 @@ Phase 3.13 adds server-defined role policies and a CUSTOMER baseline gate on
 memberships. See [RBAC](RBAC.md).
 
 Remaining Phase 3 integration includes:
-- end-to-end OAuth route integration
-- authentication UI
+- live Google/Apple verification (route integration implemented; see OAUTH_SETUP.md)
+- interactive browser verification of authentication UI
 - security verification
 
 ---
@@ -999,3 +999,12 @@ The API is the enforcement boundary.
 The service layer is the application authority.
 
 PostgreSQL remains the durable source of truth.
+
+## OAuth application routes (2026-10-07)
+
+GET /api/v1/auth/providers advertises only enabled provider names. Exact-origin
+POST /api/v1/auth/google and /api/v1/auth/apple begin a browser flow. Google returns
+to GET /api/v1/auth/google/callback; Apple uses POST /api/v1/auth/apple/callback.
+Callbacks establish the normal application session and redirect to /account;
+failures redirect to /oauth/error without reflecting provider errors or tokens.
+See OAUTH_SETUP.md for configuration, creation policy and deployment limits.

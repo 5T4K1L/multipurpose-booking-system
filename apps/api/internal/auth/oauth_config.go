@@ -125,3 +125,38 @@ type AppleClientSecretRuntimeConfig struct {
 	PrivateKeyPEM []byte
 	Validity      time.Duration
 }
+
+// LoadEnabledOAuthConfig permits password-only and independently enabled providers.
+// A provider is enabled only by an explicit true flag; incomplete enabled config fails startup.
+func LoadEnabledOAuthConfig() (OAuthRuntimeConfig, error) {
+	var result OAuthRuntimeConfig
+	for _, entry := range []struct {
+		name   string
+		load   func() (OAuthProviderConfig, error)
+		target *OAuthProviderConfig
+	}{
+		{"GOOGLE_OAUTH_ENABLED", loadGoogleConfig, &result.Google},
+		{"APPLE_OAUTH_ENABLED", loadAppleConfig, &result.Apple},
+	} {
+		value := os.Getenv(entry.name)
+		if value == "" || value == "false" {
+			continue
+		}
+		if value != "true" {
+			return result, fmt.Errorf("%s must be true or false", entry.name)
+		}
+		cfg, err := entry.load()
+		if err != nil {
+			return result, err
+		}
+		*entry.target = cfg
+	}
+	if result.Google.Provider != "" || result.Apple.Provider != "" {
+		key, err := loadTransactionKey()
+		if err != nil {
+			return result, err
+		}
+		result.TransactionKey = key
+	}
+	return result, nil
+}

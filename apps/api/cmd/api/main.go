@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"multipurpose-booking-system/api/internal/auth"
 	"multipurpose-booking-system/api/internal/database"
 	"multipurpose-booking-system/api/internal/db"
 	"multipurpose-booking-system/api/internal/migrations"
@@ -70,6 +71,23 @@ func main() {
 		log.Fatal(err)
 	}
 	mux.Handle("/api/v1/auth/me", meHandler)
+	oauthConfig, err := auth.LoadEnabledOAuthConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	apiOrigin := os.Getenv("API_PUBLIC_ORIGIN")
+	if apiOrigin == "" {
+		apiOrigin = "http://localhost:8080"
+	}
+	creation := os.Getenv("OAUTH_ALLOW_REGISTRATION")
+	if creation != "" && creation != "false" && creation != "true" {
+		log.Fatal("OAUTH_ALLOW_REGISTRATION must be true or false")
+	}
+	oauthRoutes, err := server.NewOAuthRoutes(oauthConfig, service.NewOAuthLoginService(authenticationService, sessionService, creation == "true"), webOrigin, apiOrigin, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	oauthRoutes.Register(mux)
 
 	// Register the API health endpoint.
 	mux.HandleFunc("/health", server.HealthHandler)

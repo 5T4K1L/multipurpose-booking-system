@@ -103,3 +103,30 @@ func containsString(values []string, expected string) bool {
 
 	return false
 }
+
+// Apple may encode email_verified as the string "true"/"false". Accept only
+// those exact strings or JSON booleans; never coerce arbitrary truthy values.
+func (c *OIDCClaims) UnmarshalJSON(data []byte) error {
+	type plain OIDCClaims
+	var wire struct {
+		*plain
+		Verified json.RawMessage `json:"email_verified"`
+	}
+	var decoded plain
+	wire.plain = &decoded
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	if len(wire.Verified) > 0 {
+		switch string(wire.Verified) {
+		case "true", `"true"`:
+			decoded.EmailVerified = true
+		case "false", `"false"`, "null":
+			decoded.EmailVerified = false
+		default:
+			return fmt.Errorf("invalid email verification claim")
+		}
+	}
+	*c = OIDCClaims(decoded)
+	return nil
+}

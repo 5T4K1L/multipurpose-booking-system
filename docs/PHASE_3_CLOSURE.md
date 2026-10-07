@@ -1,7 +1,9 @@
 # Phase 3.15 closure review ? 2026-10-07
 
-**Decision: Phase 3 remains open.** Review of the implemented functionality passed,
-but the roadmap's outstanding OAuth application integration is not complete.
+**Decision: Phase 3 remains open.** The initial review below found missing OAuth
+application integration. That integration was subsequently implemented and tested
+with signed mock providers; live Google/Apple and browser verification remain open.
+See the update at the end and OAUTH_SETUP.md. The initial checklist is historical.
 No Phase 4 implementation is authorized by this review.
 
 ## Closure checklist
@@ -80,3 +82,17 @@ absence of tenant/resource endpoints, and absence of statistical timing or exter
 penetration testing remain explicit scope limits. Business-role membership and
 actual tenant isolation belong to Phase 4, not this closure review. Admin controls
 and automatic platform-role assignment are not implemented or implied.
+
+## Subsequent integration update (2026-10-07)
+
+The implementation gaps above are now addressed: independent provider flags,
+start/callback routing, safe session issuance/redirects, provider discovery, and
+frontend controls are present. Mock-provider HTTP plus PostgreSQL tests pass for
+Google and Apple, including creation-disabled policy and email collision denial.
+The loader in use is now LoadEnabledOAuthConfig; the legacy all-provider loader
+remains available but is not used by main. No real credentials are enabled.
+
+Live Google is the user's chosen next step. Live Apple and interactive browser QA
+remain unverified, as does the previously documented race-detector check. This
+update does not close Phase 3 or start Phase 4. OAUTH_SETUP.md is the current setup
+contract; the earlier missing-route description above records the original finding.

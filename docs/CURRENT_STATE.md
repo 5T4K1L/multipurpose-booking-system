@@ -8,11 +8,11 @@ PHASE 3 — Authentication + Authorization
 
 3.15 - Phase 3 Closure Review (open)
 
-Closure review performed on 2026-10-07. Verification of implemented features passes, but Phase 3 remains open because OAuth route/UI integration and provider verification are incomplete.
+OAuth route/UI integration is now implemented and tested with signed mock providers and PostgreSQL. Phase 3 remains open pending live Google/Apple verification and browser QA. Google is the first provider selected for setup.
 
 The next implementation step, requiring separate authorization, is:
 
-Complete OAuth application integration and verification, then repeat Phase 3.15.
+Configure and verify Google first, then Apple; repeat Phase 3.15 after live verification.
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: complete OAuth integration and repeat the closure review; Phase 4 remains gated.
+Next task: live Google setup/verification, then Apple and closure review; Phase 4 remains gated.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -906,3 +906,25 @@ Next task: complete OAuth integration and repeat the closure review; Phase 4 rem
   remains unavailable per Phase 3.14. These limits are not reported as passing.
 - See PHASE_3_CLOSURE.md for checklist, configuration inventory and next work.
 - Phase 4 must not start before the missing integration and final review are resolved.
+
+## OAuth Application Integration (2026-10-07)
+
+- Added independently opt-in Google/Apple routes, provider discovery, sign-in controls,
+  generic completion errors, and shared local-user/session creation. Password login
+  remains available with providers disabled. New OAuth accounts require the explicit
+  OAUTH_ALLOW_REGISTRATION=true server policy; matching email never links accounts.
+- Start uses exact-origin POST. Callbacks bind encrypted cookies to state, nonce,
+  PKCE and provider; bounded one-use in-memory transactions reject replay. Multi-instance
+  deployment needs affinity or a shared store; restart invalidates pending attempts.
+- Apple callback uses bounded form_post and Secure SameSite=None transaction cookies.
+  Session cookies remain HttpOnly/SameSite=Lax. Apple ID-token verification corrected
+  to RS256; EC signing remains specific to Apple's client-secret generation.
+- Added strict boolean/string email_verified decoding and Apple-specific scope/auth style.
+- Full database-enabled Go tests, build, vet, formatting, frontend ESLint and production
+  build passed. Signed mock Google/Apple flows create local identities/sessions and
+  prove revocation, replay denial, callback bounds, creation policy and no email merge.
+- Live password registration/login/account/logout regression passed with both providers
+  disabled; provider discovery reports []. No real OAuth credentials were configured.
+- User selected Google-first setup. See OAUTH_SETUP.md for exact callback and credential
+  inventory. Live Google/Apple and visual browser verification remain outstanding.
+- No schema/dependency changes; Phase 3 remains open and Phase 4 has not started.
