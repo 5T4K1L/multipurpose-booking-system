@@ -6,13 +6,13 @@ PHASE 3 — Authentication + Authorization
 
 ## Current Step
 
-3.14 - Authentication Security Tests
+3.15 - Phase 3 Closure Review (open)
 
-Phase 3.14 security regression testing is complete with verification limits recorded below. Phase 3 is not yet closed.
+Closure review performed on 2026-10-07. Verification of implemented features passes, but Phase 3 remains open because OAuth route/UI integration and provider verification are incomplete.
 
 The next implementation step, requiring separate authorization, is:
 
-3.15 - Phase 3 Closure Review
+Complete OAuth application integration and verification, then repeat Phase 3.15.
 
 ---
 
@@ -721,7 +721,7 @@ After Phase 3 completion:
   each run uses unique identifiers and a rolled-back transaction. OAuth runtime code is unchanged.
 - No session creation, registration/login endpoints, middleware, /me, or RBAC were added.
 
-Next task: Phase 3.15 closure review, after separate authorization.
+Next task: complete OAuth integration and repeat the closure review; Phase 4 remains gated.
 
 
 ## Phase 3.7 Implementation and Verification
@@ -888,3 +888,21 @@ Next task: Phase 3.15 closure review, after separate authorization.
 - See SECURITY_TESTS.md for evidence and limits. No frontend/schema/dependency changes.
 - Phase 3.15 must review the remaining OAuth HTTP/provider integration and browser QA
   gaps before claiming Phase 3 closure. Phase 4 tenant isolation is not yet implemented.
+
+## Phase 3.15 Closure Review (2026-10-07)
+
+- Decision: Phase 3 remains OPEN. The review is recorded, not a closure approval.
+- Passed full database-enabled Go tests, backend build/vet, frontend ESLint and
+  production build with TypeScript, and live password login/account/logout smoke.
+  The initial frontend build could not download Google Fonts in the sandbox;
+  retry with network access passed.
+- Fixed an OAuth configuration mismatch found during review: generated transaction
+  keys use unpadded base64url, but the loader used standard base64. A deterministic
+  URL-alphabet regression failed before the fix and passed after it.
+- OAuth start/callback routes, frontend provider controls, and live Google/Apple
+  verification remain incomplete per the roadmap. Existing component tests do not
+  satisfy those integration requirements. No provider secrets were read or changed.
+- Browser QA retry failed to initialize (automation kernel missing). Race detector
+  remains unavailable per Phase 3.14. These limits are not reported as passing.
+- See PHASE_3_CLOSURE.md for checklist, configuration inventory and next work.
+- Phase 4 must not start before the missing integration and final review are resolved.

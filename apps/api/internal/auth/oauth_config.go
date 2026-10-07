@@ -49,7 +49,7 @@ func loadTransactionKey() ([]byte, error) {
 		return nil, fmt.Errorf("%s is required", OAuthTransactionKeyEnv)
 	}
 
-	key, err := base64.RawStdEncoding.DecodeString(value)
+	key, err := base64.RawURLEncoding.DecodeString(value)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"%s must be base64url encoded: %w",

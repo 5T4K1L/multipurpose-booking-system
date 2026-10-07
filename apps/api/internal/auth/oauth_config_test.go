@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"encoding/base64"
 	"os"
 	"testing"
@@ -68,5 +69,14 @@ func TestGenerateOAuthTransactionKey(t *testing.T) {
 
 	if len(decoded) != oauthTransactionKeyLen {
 		t.Fatalf("expected %d bytes, got %d", oauthTransactionKeyLen, len(decoded))
+	}
+}
+
+func TestLoadTransactionKeyURLAlphabet(t *testing.T) {
+	key := bytes.Repeat([]byte{255}, oauthTransactionKeyLen)
+	t.Setenv(OAuthTransactionKeyEnv, base64.RawURLEncoding.EncodeToString(key))
+	loaded, err := loadTransactionKey()
+	if err != nil || !bytes.Equal(loaded, key) {
+		t.Fatal("generated key alphabet is not accepted", err)
 	}
 }
