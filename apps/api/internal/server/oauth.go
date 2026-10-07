@@ -322,7 +322,7 @@ func (h *OAuthRoutes) verify(ctx context.Context, cfg auth.OAuthProviderConfig, 
 	}
 	claims, err := verifier.Verify(ctx, token.IDToken, time.Now())
 	if err != nil {
-		return auth.OAuthIdentity{}, errOAuthTokenValidation
+		return auth.OAuthIdentity{}, &oauthTokenFailure{reason: safeOIDCFailure(err)}
 	}
 	return auth.NormalizeOIDCIdentity(cfg.Provider, claims)
 }
@@ -331,6 +331,10 @@ var errOAuthExchange = errors.New("oauth token exchange failed")
 var errOAuthTokenValidation = errors.New("oauth id token validation failed")
 
 func oauthVerificationOutcome(err error) string {
+	var tokenFailure *oauthTokenFailure
+	if errors.As(err, &tokenFailure) {
+		return tokenFailure.reason
+	}
 	if errors.Is(err, errOAuthExchange) {
 		return "token_exchange_failed"
 	}
@@ -354,4 +358,32 @@ func oauthAccountOutcome(err error) string {
 	default:
 		return "local_authentication_unavailable"
 	}
+}
+
+// Only fixed internal categories leave this boundary, never the provider error,
+// raw token, claims, subject, email, timestamps or transport URL.
+type oauthTokenFailure struct{ reason string }
+
+func (e *oauthTokenFailure) Error() string { return "OAuth ID token validation failed" }
+func safeOIDCFailure(err error) string {
+	switch err.Error() {
+	case "validate OIDC claims: OIDC token issued in the future":
+		return "id_token_future_issued"
+	case "validate OIDC claims: OIDC token has expired":
+		return "id_token_expired"
+	case "validate OIDC claims: OIDC token is not active yet":
+		return "id_token_not_active"
+	case "validate OIDC claims: invalid OIDC issuer":
+		return "id_token_issuer_mismatch"
+	case "validate OIDC claims: invalid OIDC audience":
+		return "id_token_audience_mismatch"
+	case "validate OIDC claims: invalid OIDC authorized party":
+		return "id_token_client_mismatch"
+	case "validate OIDC claims: invalid OIDC nonce":
+		return "id_token_nonce_mismatch"
+	}
+	if strings.HasPrefix(err.Error(), "fetch OIDC signing keys:") {
+		return "id_token_keys_unavailable"
+	}
+	return "id_token_validation_failed"
 }

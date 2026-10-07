@@ -200,7 +200,7 @@ func TestOAuthRoutesRejectInvalidCallbacks(t *testing.T) {
 		{name: "state", outcome: "transaction_invalid", mutate: func(v url.Values) { v.Set("state", "attacker") }},
 		{name: "duplicate", outcome: "duplicate_parameter", mutate: func(v url.Values) { v.Add("code", "other") }},
 		{name: "provider error", outcome: "provider_denied_or_missing_code", mutate: func(v url.Values) { v.Set("error", "private-provider-error") }},
-		{name: "nonce", outcome: "id_token_validation_failed", badNonce: true},
+		{name: "nonce", outcome: "id_token_nonce_mismatch", badNonce: true},
 		{name: "email linking", outcome: "explicit_link_required", loginErr: service.ErrLinkRequired},
 		{name: "storage", outcome: "local_authentication_unavailable", loginErr: errors.New("private-storage-error")},
 	} {
@@ -356,5 +356,14 @@ func TestOAuthOriginConfiguration(t *testing.T) {
 	// Unused OAuth API settings cannot break existing password-only HTTPS startup.
 	if _, err := NewOAuthRoutes(auth.OAuthRuntimeConfig{}, nil, "https://web.example", "http://localhost:8080", nil); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestOAuthTokenDiagnosticsRedactUnknownDetails(t *testing.T) {
+	if got := oauthVerificationOutcome(&oauthTokenFailure{reason: safeOIDCFailure(errors.New("private-token-private-email"))}); got != "id_token_validation_failed" {
+		t.Fatal("untrusted details used as outcome")
+	}
+	if got := safeOIDCFailure(errors.New("validate OIDC claims: OIDC token issued in the future")); got != "id_token_future_issued" {
+		t.Fatal("missing clock diagnosis")
 	}
 }
