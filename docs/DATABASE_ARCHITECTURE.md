@@ -1173,3 +1173,14 @@ Query-efficient
 ```
 
 Application architecture must work with PostgreSQL rather than attempting to replace relational integrity with application-only conventions.
+
+## Implemented business isolation and pagination (Phase 4)
+
+Migration 000008 defines UUID businesses and unique (business_id, user_id) memberships.
+All membership mutations and scoped service operations lock business first and resolve
+current active membership after that lock. Resource queries must include trusted tenant
+scope in the same transaction; future booking/resource constraints remain Phase 5 work.
+List queries use bounded keyset pagination: (created_at, id) for businesses and user_id
+within one business for memberships. Queries fetch at most limit + 1 rows (101 maximum).
+There is no PostgreSQL RLS claim; current isolation is enforced by service policy and
+scoped SQL and verified by database integration tests.

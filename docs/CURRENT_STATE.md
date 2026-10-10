@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-PHASE 4 - Multi-Tenancy (in progress)
+PHASE 4 - Multi-Tenancy (development scope completed)
 
 ## Current Step
 
-4.1 - Business and membership backend foundation completed (2026-10-10).
+4.2 - Pagination, tenant-access contract and concurrency review completed (2026-10-10).
 See [PHASE_4_MULTITENANCY.md](PHASE_4_MULTITENANCY.md) for APIs, checks and limits.
 
 Google live sign-in was verified. The user explicitly deferred Apple setup/live
@@ -14,8 +14,8 @@ verification and authorized Phase 4 progression. Phase 3 is not unconditionally
 closed: [DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple setup and outstanding
 browser, race-detector and production checks with instructions to resume them.
 
-Next: Phase 4.2 pagination, reusable tenant access contract and concurrency/isolation
-review. Booking and dashboard implementation remain in later phases.
+Next: Phase 5.1 core booking domain/schema foundation. Phase 5 implementation has
+not started; business dashboards remain Phase 6.
 
 ---
 

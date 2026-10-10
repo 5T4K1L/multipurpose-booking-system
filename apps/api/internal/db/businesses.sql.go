@@ -69,11 +69,19 @@ func (q *Queries) GetBusinessMembership(ctx context.Context, arg GetBusinessMemb
 }
 
 const listBusinessMemberships = `-- name: ListBusinessMemberships :many
-SELECT business_id, user_id, role, created_at FROM business_memberships WHERE business_id=$1 ORDER BY user_id LIMIT 100
+SELECT business_id, user_id, role, created_at FROM business_memberships
+WHERE business_id=$1 AND user_id > $2::bigint
+ORDER BY user_id LIMIT $3
 `
 
-func (q *Queries) ListBusinessMemberships(ctx context.Context, businessID pgtype.UUID) ([]BusinessMembership, error) {
-	rows, err := q.db.Query(ctx, listBusinessMemberships, businessID)
+type ListBusinessMembershipsParams struct {
+	BusinessID  pgtype.UUID
+	AfterUserID int64
+	PageSize    int32
+}
+
+func (q *Queries) ListBusinessMemberships(ctx context.Context, arg ListBusinessMembershipsParams) ([]BusinessMembership, error) {
+	rows, err := q.db.Query(ctx, listBusinessMemberships, arg.BusinessID, arg.AfterUserID, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +110,17 @@ SELECT b.id, b.name, b.timezone, b.status, b.created_at, m.role FROM businesses 
 JOIN business_memberships m ON m.business_id=b.id
 JOIN users u ON u.id=m.user_id
 WHERE m.user_id=$1 AND u.status='active' AND b.status='active'
-ORDER BY b.created_at,b.id LIMIT 100
+AND (NOT $2::boolean OR (b.created_at,b.id) > ($3::timestamptz,$4::uuid))
+ORDER BY b.created_at,b.id LIMIT $5
 `
+
+type ListUserBusinessesParams struct {
+	UserID         int64
+	HasCursor      bool
+	AfterCreatedAt pgtype.Timestamptz
+	AfterID        pgtype.UUID
+	PageSize       int32
+}
 
 type ListUserBusinessesRow struct {
 	ID        pgtype.UUID
@@ -114,8 +131,14 @@ type ListUserBusinessesRow struct {
 	Role      string
 }
 
-func (q *Queries) ListUserBusinesses(ctx context.Context, userID int64) ([]ListUserBusinessesRow, error) {
-	rows, err := q.db.Query(ctx, listUserBusinesses, userID)
+func (q *Queries) ListUserBusinesses(ctx context.Context, arg ListUserBusinessesParams) ([]ListUserBusinessesRow, error) {
+	rows, err := q.db.Query(ctx, listUserBusinesses,
+		arg.UserID,
+		arg.HasCursor,
+		arg.AfterCreatedAt,
+		arg.AfterID,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -141,12 +164,29 @@ func (q *Queries) ListUserBusinesses(ctx context.Context, userID int64) ([]ListU
 	return items, nil
 }
 
+const lockBusiness = `-- name: LockBusiness :one
+SELECT id, name, timezone, status, created_at FROM businesses WHERE id=$1 AND status='active' FOR UPDATE
+`
+
+func (q *Queries) LockBusiness(ctx context.Context, id pgtype.UUID) (Business, error) {
+	row := q.db.QueryRow(ctx, lockBusiness, id)
+	var i Business
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Timezone,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const lockBusinessAccess = `-- name: LockBusinessAccess :one
 SELECT b.id, b.name, b.timezone, b.status, b.created_at,m.role FROM businesses b
 JOIN business_memberships m ON m.business_id=b.id
 JOIN users u ON u.id=m.user_id
 WHERE b.id=$1 AND m.user_id=$2 AND b.status='active' AND u.status='active'
-FOR UPDATE OF b,m
+FOR UPDATE OF m
 `
 
 type LockBusinessAccessParams struct {

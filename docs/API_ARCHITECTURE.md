@@ -1008,3 +1008,11 @@ to GET /api/v1/auth/google/callback; Apple uses POST /api/v1/auth/apple/callback
 Callbacks establish the normal application session and redirect to /account;
 failures redirect to /oauth/error without reflecting provider errors or tokens.
 See OAUTH_SETUP.md for configuration, creation policy and deployment limits.
+
+## Implemented business list pagination (Phase 4.2)
+
+GET /api/v1/businesses and GET /api/v1/businesses/{id}/memberships keep array responses.
+Optional limit is 1..100 (default 100). Continue with cursor from X-Next-Cursor, exposed
+through CORS; absent header means completion. Invalid pagination returns 400.
+Cursors are bounded unsigned selectors, never authorization. Each page checks current
+identity/membership. See PHASE_4_MULTITENANCY.md for the full API and role contract.

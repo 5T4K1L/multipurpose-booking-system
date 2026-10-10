@@ -19,10 +19,11 @@ var ErrInvalidBusiness = errors.New("invalid business input")
 type BusinessStore interface {
 	GetUserByID(context.Context, int64) (db.User, error)
 	CreateBusiness(context.Context, db.CreateBusinessParams) (db.Business, error)
-	ListUserBusinesses(context.Context, int64) ([]db.ListUserBusinessesRow, error)
+	ListUserBusinesses(context.Context, db.ListUserBusinessesParams) ([]db.ListUserBusinessesRow, error)
+	LockBusiness(context.Context, pgtype.UUID) (db.Business, error)
 	LockBusinessAccess(context.Context, db.LockBusinessAccessParams) (db.LockBusinessAccessRow, error)
 	GetBusinessMembership(context.Context, db.GetBusinessMembershipParams) (db.BusinessMembership, error)
-	ListBusinessMemberships(context.Context, pgtype.UUID) ([]db.BusinessMembership, error)
+	ListBusinessMemberships(context.Context, db.ListBusinessMembershipsParams) ([]db.BusinessMembership, error)
 	PutBusinessMembership(context.Context, db.PutBusinessMembershipParams) error
 	DeleteBusinessMembership(context.Context, db.DeleteBusinessMembershipParams) error
 }
@@ -95,49 +96,14 @@ func (s *BusinessService) Create(ctx context.Context, actor int64, in BusinessIn
 	}
 	return out, nil
 }
-func (s *BusinessService) List(ctx context.Context, actor int64) ([]BusinessView, error) {
-	out := []BusinessView{}
-	err := s.transactions.WithinBusiness(ctx, func(q BusinessStore) error {
-		if err := activeBusinessUser(ctx, q, actor); err != nil {
-			return err
-		}
-		rows, err := q.ListUserBusinesses(ctx, actor)
-		if err != nil {
-			return err
-		}
-		for _, b := range rows {
-			if !businessRole(Role(b.Role)) {
-				return ErrForbidden
-			}
-			out = append(out, BusinessView{b.ID, b.Name, b.Timezone, Role(b.Role)})
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
 
-// Access is resolved from current membership inside every transaction. The UUID
-// supplied by a client is only a selector, never a tenant authorization claim.
+// List retains the first-page convenience API; HTTP callers use ListPage.
+func (s *BusinessService) List(ctx context.Context, actor int64) ([]BusinessView, error) {
+	page, err := s.ListPage(ctx, actor, PageRequest{})
+	return page.Items, err
+}
 func (s *BusinessService) within(ctx context.Context, actor int64, id pgtype.UUID, fn func(BusinessStore, BusinessView) error) error {
-	if actor <= 0 || !id.Valid {
-		return ErrForbidden
-	}
-	return s.transactions.WithinBusiness(ctx, func(q BusinessStore) error {
-		b, err := q.LockBusinessAccess(ctx, db.LockBusinessAccessParams{ID: id, UserID: actor})
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrForbidden
-		}
-		if err != nil {
-			return err
-		}
-		if !businessRole(Role(b.Role)) {
-			return ErrForbidden
-		}
-		return fn(q, BusinessView{b.ID, b.Name, b.Timezone, Role(b.Role)})
-	})
+	return s.WithinTenant(ctx, actor, id, []Role{RoleBusinessOwner, RoleBusinessAdmin, RoleManager, RoleStaff}, func(q BusinessStore, a TenantAccess) error { return fn(q, a.business) })
 }
 func (s *BusinessService) Get(ctx context.Context, actor int64, id pgtype.UUID) (BusinessView, error) {
 	var out BusinessView
@@ -148,24 +114,8 @@ func (s *BusinessService) Get(ctx context.Context, actor int64, id pgtype.UUID) 
 	return out, nil
 }
 func (s *BusinessService) Members(ctx context.Context, actor int64, id pgtype.UUID) ([]MembershipView, error) {
-	out := []MembershipView{}
-	err := s.within(ctx, actor, id, func(q BusinessStore, b BusinessView) error {
-		if b.Role != RoleBusinessOwner && b.Role != RoleBusinessAdmin {
-			return ErrForbidden
-		}
-		rows, err := q.ListBusinessMemberships(ctx, id)
-		if err != nil {
-			return err
-		}
-		for _, m := range rows {
-			out = append(out, MembershipView{m.UserID, Role(m.Role)})
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+	page, err := s.MembersPage(ctx, actor, id, PageRequest{})
+	return page.Items, err
 }
 
 // Owner transfer/removal is intentionally unavailable in this milestone.

@@ -245,3 +245,13 @@ Exceptions require an explicit architectural decision documented in `DECISIONS.m
 Architecture should provide enough structure to support the current product requirements without creating unnecessary complexity for hypothetical future requirements.
 
 Only add OAuth provider/auth-service layering if that structure is not already covered by AUTHENTICATION_ARCHITECTURE.md. Avoid duplicating detailed OAuth rules.
+
+## Implemented tenant transaction boundary (Phase 4)
+
+BusinessService.WithinTenant validates an explicit scoped-role policy, locks the
+business, re-reads current active membership, then passes a private-field TenantAccess
+snapshot and transaction-bound store to the callback. Platform roles confer no tenant
+bypass. Do not cache this snapshot, use it outside the callback as authorization, or
+publish results before the transaction commits. Extend the store for future tenant
+resources and include its scoped business ID in every resource lookup/mutation.
+See PHASE_4_MULTITENANCY.md for locking, role policies and verification.

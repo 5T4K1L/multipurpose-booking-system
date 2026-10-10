@@ -9,6 +9,7 @@ import (
 	"mime"
 	"multipurpose-booking-system/api/internal/service"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -67,7 +68,16 @@ func NewBusinessHandler(sessions sessionValidator, businesses *service.BusinessS
 		if path == "" {
 			switch r.Method {
 			case "GET":
-				result, e = businesses.List(ctx, actor.UserID)
+				input, parseErr := businessPageRequest(r)
+				if parseErr != nil {
+					fail(w, 400, "INVALID_PAGINATION")
+					return
+				}
+				page, pageErr := businesses.ListPage(ctx, actor.UserID, input)
+				result, e = page.Items, pageErr
+				if e == nil && page.NextCursor != "" {
+					w.Header().Set("X-Next-Cursor", page.NextCursor)
+				}
 			case "POST":
 				var in service.BusinessInput
 				if !decode(&in) {
@@ -90,7 +100,16 @@ func NewBusinessHandler(sessions sessionValidator, businesses *service.BusinessS
 			case len(parts) == 1 && r.Method == "GET":
 				result, e = businesses.Get(ctx, actor.UserID, id)
 			case len(parts) == 2 && parts[1] == "memberships" && r.Method == "GET":
-				result, e = businesses.Members(ctx, actor.UserID, id)
+				input, parseErr := businessPageRequest(r)
+				if parseErr != nil {
+					fail(w, 400, "INVALID_PAGINATION")
+					return
+				}
+				page, pageErr := businesses.MembersPage(ctx, actor.UserID, id, input)
+				result, e = page.Items, pageErr
+				if e == nil && page.NextCursor != "" {
+					w.Header().Set("X-Next-Cursor", page.NextCursor)
+				}
 			case len(parts) == 3 && parts[1] == "memberships" && (r.Method == "PUT" || r.Method == "DELETE"):
 				target, parseErr := strconv.ParseInt(parts[2], 10, 64)
 				if parseErr != nil || target <= 0 {
@@ -112,6 +131,10 @@ func NewBusinessHandler(sessions sessionValidator, businesses *service.BusinessS
 		}
 		if errors.Is(e, service.ErrForbidden) {
 			fail(w, 403, "FORBIDDEN")
+			return
+		}
+		if errors.Is(e, service.ErrInvalidPage) {
+			fail(w, 400, "INVALID_PAGINATION")
 			return
 		}
 		if errors.Is(e, service.ErrInvalidBusiness) {
@@ -139,6 +162,7 @@ func NewBusinessHandler(sessions sessionValidator, businesses *service.BusinessS
 		if requestOrigin == origin {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Expose-Headers", "X-Next-Cursor")
 		}
 		if r.Method == "OPTIONS" {
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -148,4 +172,28 @@ func NewBusinessHandler(sessions sessionValidator, businesses *service.BusinessS
 		}
 		protected.ServeHTTP(w, r)
 	}), nil
+}
+
+func businessPageRequest(r *http.Request) (service.PageRequest, error) {
+	values, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		return service.PageRequest{}, service.ErrInvalidPage
+	}
+	out := service.PageRequest{}
+	if v, ok := values["limit"]; ok {
+		if len(v) != 1 {
+			return out, service.ErrInvalidPage
+		}
+		out.Limit, err = strconv.Atoi(v[0])
+		if err != nil || out.Limit < 1 || out.Limit > 100 {
+			return out, service.ErrInvalidPage
+		}
+	}
+	if v, ok := values["cursor"]; ok {
+		if len(v) != 1 || v[0] == "" || len(v[0]) > 1024 {
+			return out, service.ErrInvalidPage
+		}
+		out.Cursor = v[0]
+	}
+	return out, nil
 }

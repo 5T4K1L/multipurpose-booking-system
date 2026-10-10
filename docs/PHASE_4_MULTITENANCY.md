@@ -1,8 +1,9 @@
-# Phase 4.1 - Business and membership foundation
+# Phase 4 - Multi-tenancy foundation
 
 Completed 2026-10-10. User authorized development progression with live Apple
 setup/testing deferred; see [DEFERRED_WORK.md](DEFERRED_WORK.md).
-Phase 4 remains in progress; this milestone does not close the entire phase.
+Phase 4.2 and the development closure review completed on 2026-10-10. The scope is
+the current business/membership resources; future booking resources need their own isolation tests.
 
 ## Implemented behavior
 
@@ -41,7 +42,14 @@ Business response fields: id, name, timezone, role. Lists are arrays (empty is `
 Invalid input returns 400, missing/invalid session 401, denied access 403, and
 storage failure 503. Missing and inaccessible businesses share the same 403 response.
 Existing-user IDs are required; invitations and email lookup are not implemented.
-Lists currently return at most 100 entries; pagination is required before larger use.
+Both list endpoints accept `limit=1..100` (default 100) and `cursor=<value>`.
+Array responses remain compatible. `X-Next-Cursor` appears only when another page
+exists and is exposed through CORS. Pass it unchanged as the next cursor. An absent
+header means the end. Invalid, duplicated or cross-list parameters return 400.
+Businesses sort by (created_at, UUID); memberships by user_id. Cursors bind the actor,
+list kind and business where applicable. They are unsigned selectors, not credentials;
+changing a cursor cannot bypass the current membership checks. Pages are fresh reads,
+not a frozen export snapshot: concurrent additions/removals can change later pages.
 
 ## Verification
 
@@ -57,10 +65,44 @@ Lists currently return at most 100 entries; pagination is required before larger
 No frontend changes or browser verification are part of this backend milestone.
 Race-detector and earlier release QA gaps remain in DEFERRED_WORK.md.
 
+## Phase 4.2 authorization and concurrency contract
+
+WithinTenant locks the active business first, then resolves active membership in
+another statement. It requires an explicit exact-role allowlist; empty, unknown,
+and platform-role policies fail closed. TenantAccess has private fields with read-only
+accessors for actor, business and role. It is valid as an authorization snapshot only
+inside the transaction callback, never as a reusable credential or cached session claim.
+
+All future tenant resource repositories must run through this transaction boundary,
+use its scoped business ID in every resource query, and avoid external side effects
+or publishing results until the transaction commits. Extend the transaction store
+with narrow resource methods rather than opening an unrelated transaction. Resource
+ownership remains a separate check. All membership writers must lock business first.
+
+PostgreSQL contention tests deliberately hold one transaction open while a second
+request waits. Committed revocation/demotion denies the waiting request. Another
+business continues independently, and cancelled waiters leave no retained locks.
+The per-business lock deliberately serializes scoped operations for this foundation;
+load testing and finer locking are future scaling work, not verified here.
+
+Additional pagination tests cover 105 businesses and 105 memberships, equal creation
+timestamps, default/custom page sizes, malformed and cross-scope cursors, deleted
+boundary rows, and loss of permission between pages. Unit tests cover invalid policies.
+The full database-enabled test suite, build and vet passed after these changes.
+
+## Closure and known limits
+
+Phase 4 development scope is complete for businesses/memberships. No new migration
+or manual configuration was needed for 4.2. Existing APIs remain compatible; there
+are no new frontend screens. This is not production or external security certification.
+Apple live setup, automated browser QA and race-detector execution remain explicitly
+tracked in DEFERRED_WORK.md. Existing transaction/rate-limit scaling limitations remain.
+Owner transfer and invitations are not implemented. Future services, resources and
+bookings must prove their own tenant constraints and ownership rules before release.
+
 ## Next task
 
-Phase 4.2: add bounded cursor pagination and a reusable tenant access contract for
-future resource repositories; expand concurrent membership-change/isolation tests
-and perform the Phase 4 closure review. Bookings (Phase 5) and business dashboards
-(Phase 6) remain outside this milestone. Owner-transfer/invitations need their own
-explicit workflow before implementation.
+Phase 5.1 - Core Booking Engine foundation: define tenant-owned services, staff,
+resources and locations, then implement the first scoped schema/service milestone.
+Booking creation, availability and double-booking prevention follow within Phase 5.
+Business dashboards remain Phase 6. No Phase 5 implementation is included here.
