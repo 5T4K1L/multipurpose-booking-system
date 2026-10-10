@@ -2,17 +2,20 @@
 
 ## Current Phase
 
-PHASE 3 — Authentication + Authorization
+PHASE 4 - Multi-Tenancy (in progress)
 
 ## Current Step
 
-3.15 - Phase 3 Closure Review (open)
+4.1 - Business and membership backend foundation completed (2026-10-10).
+See [PHASE_4_MULTITENANCY.md](PHASE_4_MULTITENANCY.md) for APIs, checks and limits.
 
-OAuth route/UI integration is now implemented and tested with signed mock providers and PostgreSQL. Phase 3 remains open pending live Google/Apple verification and browser QA. Google is the first provider selected for setup.
+Google live sign-in was verified. The user explicitly deferred Apple setup/live
+verification and authorized Phase 4 progression. Phase 3 is not unconditionally
+closed: [DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple setup and outstanding
+browser, race-detector and production checks with instructions to resume them.
 
-The next implementation step, requiring separate authorization, is:
-
-Configure and verify Google first, then Apple; repeat Phase 3.15 after live verification.
+Next: Phase 4.2 pagination, reusable tenant access contract and concurrency/isolation
+review. Booking and dashboard implementation remain in later phases.
 
 ---
 

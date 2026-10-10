@@ -104,3 +104,10 @@ callback. Local Google live verification is complete. Windows time synchronizati
 resolved the earlier future-issued-token failure; no validation bypass was added.
 Apple live verification remains pending. This does not claim automated browser QA,
 race detection, production readiness, or Phase 3 closure.
+
+## User-authorized deferral - 2026-10-10
+
+The user explicitly deferred Apple setup/live testing and requested the next phase.
+Phase 4 development may proceed under that instruction. Apple remains disabled;
+this is not unconditional Phase 3 closure or production sign-off. Resume steps and
+other outstanding browser/race/deployment checks are in DEFERRED_WORK.md.

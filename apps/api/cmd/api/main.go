@@ -71,6 +71,12 @@ func main() {
 		log.Fatal(err)
 	}
 	mux.Handle("/api/v1/auth/me", meHandler)
+	businessHandler, err := server.NewBusinessHandler(sessionService, service.NewBusinessService(repository.NewBusinessTransactions(dbPool)), webOrigin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mux.Handle("/api/v1/businesses", businessHandler)
+	mux.Handle("/api/v1/businesses/", businessHandler)
 	oauthConfig, err := auth.LoadEnabledOAuthConfig()
 	if err != nil {
 		log.Fatal(err)

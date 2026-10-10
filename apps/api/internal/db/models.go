@@ -8,6 +8,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Business struct {
+	ID        pgtype.UUID
+	Name      string
+	Timezone  string
+	Status    string
+	CreatedAt pgtype.Timestamptz
+}
+
+type BusinessMembership struct {
+	BusinessID pgtype.UUID
+	UserID     int64
+	Role       string
+	CreatedAt  pgtype.Timestamptz
+}
+
 type User struct {
 	ID        int64
 	Email     string

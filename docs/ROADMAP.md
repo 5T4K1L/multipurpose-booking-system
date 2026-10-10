@@ -137,7 +137,7 @@ PHASE 0   Engineering Foundation              COMPLETE
 PHASE 1   System Architecture                 COMPLETE
 PHASE 2   Database Architecture               COMPLETE
 PHASE 3   Authentication + Authorization      IN PROGRESS
-PHASE 4   Multi-Tenancy                       NOT STARTED
+PHASE 4   Multi-Tenancy                       IN PROGRESS
 PHASE 5   Core Booking Engine                 NOT STARTED
 PHASE 6   Business SaaS + Business Admin      NOT STARTED
 PHASE 7   Customer Platform + Customer UI     NOT STARTED
@@ -1311,28 +1311,14 @@ Only then should the phase be marked complete.
 
 # Current Development Position
 
-The project is currently here:
+As of 2026-10-10, Phase 4.1 business/membership backend foundation is complete;
+Phase 4 remains in progress. See PHASE_4_MULTITENANCY.md for implementation scope,
+verification and the next Phase 4.2 milestone.
 
-```text id="a4b5c6"
-PHASE 3 — Authentication + Authorization
-```
+The user explicitly authorized moving forward with Apple setup/live verification
+deferred. This overrides the earlier development gate for this progression only;
+it does not claim unconditional Phase 3 closure or production readiness.
+DEFERRED_WORK.md preserves all outstanding setup and verification steps.
 
-The most recent completed development milestone is:
-
-```text id="d7e8f9"
-PHASE 3.14 - Authentication Security Tests
-```
-
-The next implementation milestone is:
-
-```text id="g0h1i2"
-PHASE 3.15 - Closure review OPEN: live OAuth setup and verification
-```
-
-The next phase after Phase 3 remains:
-
-```text id="j3k4l5"
-PHASE 4 — Multi-Tenancy
-```
-
-No Phase 4 implementation should begin until Phase 3 has been formally closed.
+Next: Phase 4.2 pagination, reusable tenant access contract and concurrency/isolation
+review before closing Phase 4. Phase 5 booking work has not started.
