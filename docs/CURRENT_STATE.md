@@ -2,20 +2,22 @@
 
 ## Current Phase
 
-PHASE 4 - Multi-Tenancy (development scope completed)
+PHASE 5 - Core Booking Engine (in progress)
 
 ## Current Step
 
-4.2 - Pagination, tenant-access contract and concurrency review completed (2026-10-10).
-See [PHASE_4_MULTITENANCY.md](PHASE_4_MULTITENANCY.md) for APIs, checks and limits.
+5.1 - Tenant-owned booking catalog schema and service foundation completed (2026-10-10).
+See [PHASE_5_BOOKING_ENGINE.md](PHASE_5_BOOKING_ENGINE.md) for scope, policy and tests.
+Locations, services, staff profiles and resources now have scoped create/read service
+operations and database constraints. Catalog endpoints and screens are not present yet.
+Phase 4 business/membership development scope remains complete.
 
-Google live sign-in was verified. The user explicitly deferred Apple setup/live
-verification and authorized Phase 4 progression. Phase 3 is not unconditionally
-closed: [DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple setup and outstanding
-browser, race-detector and production checks with instructions to resume them.
+Next: Phase 5.2 protected catalog APIs, paginated reads and eligibility relationships.
+Scheduling and booking enforcement follow; business dashboards remain Phase 6.
 
-Next: Phase 5.1 core booking domain/schema foundation. Phase 5 implementation has
-not started; business dashboards remain Phase 6.
+Google remains enabled; Apple setup/live verification is deferred by user instruction.
+[DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple, browser, race-detector and
+production checks. This is not unconditional Phase 3 closure or production sign-off.
 
 ---
 

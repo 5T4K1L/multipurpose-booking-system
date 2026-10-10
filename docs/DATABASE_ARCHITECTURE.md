@@ -1184,3 +1184,13 @@ List queries use bounded keyset pagination: (created_at, id) for businesses and 
 within one business for memberships. Queries fetch at most limit + 1 rows (101 maximum).
 There is no PostgreSQL RLS claim; current isolation is enforced by service policy and
 scoped SQL and verified by database integration tests.
+
+## Booking catalog foundation (Phase 5.1)
+
+Migration 000009 adds tenant-owned locations, services, staff_profiles and resources.
+Each has a UUID primary key and unique (business_id,id) key. Resource location links
+use a composite foreign key including business_id, so PostgreSQL rejects cross-tenant
+relationships. Restrictive deletion protects future history; lifecycle mutation is
+not implemented yet. Service duration and resource capacity have database checks.
+Location timezones are explicit. Staff profiles are separate from authentication
+identities and membership roles. See PHASE_5_BOOKING_ENGINE.md for exact boundaries.

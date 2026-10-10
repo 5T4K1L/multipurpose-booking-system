@@ -23,6 +23,46 @@ type BusinessMembership struct {
 	CreatedAt  pgtype.Timestamptz
 }
 
+type Location struct {
+	ID         pgtype.UUID
+	BusinessID pgtype.UUID
+	Name       string
+	Timezone   string
+	Status     string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+type Resource struct {
+	ID         pgtype.UUID
+	BusinessID pgtype.UUID
+	LocationID pgtype.UUID
+	Name       string
+	Capacity   int32
+	Status     string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
+type Service struct {
+	ID              pgtype.UUID
+	BusinessID      pgtype.UUID
+	Name            string
+	DurationMinutes int32
+	Status          string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+type StaffProfile struct {
+	ID         pgtype.UUID
+	BusinessID pgtype.UUID
+	Name       string
+	Status     string
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+}
+
 type User struct {
 	ID        int64
 	Email     string

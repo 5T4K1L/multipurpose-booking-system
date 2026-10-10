@@ -138,7 +138,7 @@ PHASE 1   System Architecture                 COMPLETE
 PHASE 2   Database Architecture               COMPLETE
 PHASE 3   Authentication + Authorization      IN PROGRESS
 PHASE 4   Multi-Tenancy                       COMPLETED (development scope)
-PHASE 5   Core Booking Engine                 NOT STARTED
+PHASE 5   Core Booking Engine                 IN PROGRESS
 PHASE 6   Business SaaS + Business Admin      NOT STARTED
 PHASE 7   Customer Platform + Customer UI     NOT STARTED
 PHASE 8   Customer CRM + Import/Export        NOT STARTED
@@ -1311,14 +1311,14 @@ Only then should the phase be marked complete.
 
 # Current Development Position
 
-As of 2026-10-10, Phase 4.2 and the Phase 4 development closure review are complete
-for the current business/membership resources. PHASE_4_MULTITENANCY.md records API
-compatibility, pagination, transaction-bound tenant access, concurrency evidence,
-verification and known limits.
+As of 2026-10-10, Phase 5.1 booking catalog schema/service foundation is complete.
+Phase 5 remains in progress. PHASE_5_BOOKING_ENGINE.md records tenant-owned locations,
+services, staff profiles and resources, database constraints, policies and verification.
+There are no catalog HTTP endpoints or booking operations in this milestone.
 
-The user authorized progression with Apple live setup/verification deferred.
-DEFERRED_WORK.md still records Apple, browser, race-detector and production checks;
-this does not claim unconditional Phase 3 closure or production readiness.
+Phase 4 business/membership development scope is complete. The user authorized
+progression with Apple live setup deferred. DEFERRED_WORK.md retains Apple, browser,
+race-detector and production checks without claiming unconditional Phase 3 closure.
 
-Next: Phase 5.1 core booking domain/schema foundation. Phase 5 implementation has
-not started. Business dashboards remain Phase 6.
+Next: Phase 5.2 protected catalog APIs, paginated reads and eligibility relationships.
+Scheduling and booking enforcement follow within Phase 5. Dashboards remain Phase 6.

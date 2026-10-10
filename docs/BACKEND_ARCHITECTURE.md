@@ -255,3 +255,11 @@ bypass. Do not cache this snapshot, use it outside the callback as authorization
 publish results before the transaction commits. Extend the store for future tenant
 resources and include its scoped business ID in every resource lookup/mutation.
 See PHASE_4_MULTITENANCY.md for locking, role policies and verification.
+
+## Booking catalog service (Phase 5.1)
+
+BookingCatalogService extends the transaction store through BookingCatalogStore and
+runs create/read operations through WithinTenant. OWNER/ADMIN can create; current
+members can read. Generated SQL scopes resource lookups by business_id and id, and
+resource creation resolves an active same-business location before insertion.
+No HTTP handlers or frontend flows are added yet. See PHASE_5_BOOKING_ENGINE.md.

@@ -17,6 +17,7 @@ import (
 var ErrInvalidBusiness = errors.New("invalid business input")
 
 type BusinessStore interface {
+	BookingCatalogStore
 	GetUserByID(context.Context, int64) (db.User, error)
 	CreateBusiness(context.Context, db.CreateBusinessParams) (db.Business, error)
 	ListUserBusinesses(context.Context, db.ListUserBusinessesParams) ([]db.ListUserBusinessesRow, error)
