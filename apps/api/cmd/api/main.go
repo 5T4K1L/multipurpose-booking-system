@@ -71,12 +71,18 @@ func main() {
 		log.Fatal(err)
 	}
 	mux.Handle("/api/v1/auth/me", meHandler)
-	businessHandler, err := server.NewBusinessHandler(sessionService, service.NewBusinessService(repository.NewBusinessTransactions(dbPool)), webOrigin)
+	businessService := service.NewBusinessService(repository.NewBusinessTransactions(dbPool))
+	businessHandler, err := server.NewBusinessHandler(sessionService, businessService, webOrigin)
 	if err != nil {
 		log.Fatal(err)
 	}
 	mux.Handle("/api/v1/businesses", businessHandler)
 	mux.Handle("/api/v1/businesses/", businessHandler)
+	catalogHandler, err := server.NewCatalogHandler(sessionService, service.NewBookingCatalogService(businessService), webOrigin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	server.RegisterCatalogRoutes(mux, catalogHandler)
 	oauthConfig, err := auth.LoadEnabledOAuthConfig()
 	if err != nil {
 		log.Fatal(err)

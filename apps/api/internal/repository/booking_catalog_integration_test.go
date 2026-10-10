@@ -254,4 +254,27 @@ func TestBookingCatalogMigrationRoundTrip(t *testing.T) {
 			}
 		}
 	}
+	// The eligibility migration depends on the catalog schema restored above.
+	eligibilityUp, err := os.ReadFile("../../../../migrations/000010_catalog_eligibility.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	eligibilityDown, err := os.ReadFile("../../../../migrations/000010_catalog_eligibility.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []struct {
+		sql    []byte
+		exists bool
+	}{{eligibilityUp, true}, {eligibilityDown, false}, {eligibilityUp, true}} {
+		if _, err := tx.Exec(ctx, string(step.sql)); err != nil {
+			t.Fatal(err)
+		}
+		for _, table := range []string{"service_locations", "service_staff", "service_resources", "staff_locations"} {
+			var exists bool
+			if err := tx.QueryRow(ctx, "SELECT to_regclass($1) IS NOT NULL", schema+"."+table).Scan(&exists); err != nil || exists != step.exists {
+				t.Fatal(table, exists, err)
+			}
+		}
+	}
 }

@@ -54,6 +54,34 @@ type Service struct {
 	UpdatedAt       pgtype.Timestamptz
 }
 
+type ServiceLocation struct {
+	BusinessID pgtype.UUID
+	ServiceID  pgtype.UUID
+	LocationID pgtype.UUID
+	CreatedAt  pgtype.Timestamptz
+}
+
+type ServiceResource struct {
+	BusinessID pgtype.UUID
+	ServiceID  pgtype.UUID
+	ResourceID pgtype.UUID
+	CreatedAt  pgtype.Timestamptz
+}
+
+type ServiceStaff struct {
+	BusinessID pgtype.UUID
+	ServiceID  pgtype.UUID
+	StaffID    pgtype.UUID
+	CreatedAt  pgtype.Timestamptz
+}
+
+type StaffLocation struct {
+	BusinessID pgtype.UUID
+	StaffID    pgtype.UUID
+	LocationID pgtype.UUID
+	CreatedAt  pgtype.Timestamptz
+}
+
 type StaffProfile struct {
 	ID         pgtype.UUID
 	BusinessID pgtype.UUID

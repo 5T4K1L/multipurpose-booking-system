@@ -213,3 +213,192 @@ func (q *Queries) GetStaffProfile(ctx context.Context, arg GetStaffProfileParams
 	)
 	return i, err
 }
+
+const listLocations = `-- name: ListLocations :many
+SELECT t.id, t.business_id, t.name, t.timezone, t.status, t.created_at, t.updated_at FROM locations t
+WHERE t.business_id=$1 AND t.status='active'
+AND (NOT $2::boolean OR t.id > $3::uuid)
+ORDER BY t.id LIMIT $4
+`
+
+type ListLocationsParams struct {
+	BusinessID pgtype.UUID
+	HasCursor  bool
+	AfterID    pgtype.UUID
+	PageSize   int32
+}
+
+func (q *Queries) ListLocations(ctx context.Context, arg ListLocationsParams) ([]Location, error) {
+	rows, err := q.db.Query(ctx, listLocations,
+		arg.BusinessID,
+		arg.HasCursor,
+		arg.AfterID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Location
+	for rows.Next() {
+		var i Location
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.Name,
+			&i.Timezone,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listResources = `-- name: ListResources :many
+SELECT t.id, t.business_id, t.location_id, t.name, t.capacity, t.status, t.created_at, t.updated_at FROM resources t
+WHERE t.business_id=$1 AND t.status='active'
+AND (NOT $2::boolean OR t.id > $3::uuid)
+AND EXISTS(SELECT 1 FROM locations l WHERE l.business_id=t.business_id AND l.id=t.location_id AND l.status='active')
+ORDER BY t.id LIMIT $4
+`
+
+type ListResourcesParams struct {
+	BusinessID pgtype.UUID
+	HasCursor  bool
+	AfterID    pgtype.UUID
+	PageSize   int32
+}
+
+func (q *Queries) ListResources(ctx context.Context, arg ListResourcesParams) ([]Resource, error) {
+	rows, err := q.db.Query(ctx, listResources,
+		arg.BusinessID,
+		arg.HasCursor,
+		arg.AfterID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Resource
+	for rows.Next() {
+		var i Resource
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.LocationID,
+			&i.Name,
+			&i.Capacity,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServices = `-- name: ListServices :many
+SELECT t.id, t.business_id, t.name, t.duration_minutes, t.status, t.created_at, t.updated_at FROM services t
+WHERE t.business_id=$1 AND t.status='active'
+AND (NOT $2::boolean OR t.id > $3::uuid)
+ORDER BY t.id LIMIT $4
+`
+
+type ListServicesParams struct {
+	BusinessID pgtype.UUID
+	HasCursor  bool
+	AfterID    pgtype.UUID
+	PageSize   int32
+}
+
+func (q *Queries) ListServices(ctx context.Context, arg ListServicesParams) ([]Service, error) {
+	rows, err := q.db.Query(ctx, listServices,
+		arg.BusinessID,
+		arg.HasCursor,
+		arg.AfterID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Service
+	for rows.Next() {
+		var i Service
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.Name,
+			&i.DurationMinutes,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStaffProfiles = `-- name: ListStaffProfiles :many
+SELECT t.id, t.business_id, t.name, t.status, t.created_at, t.updated_at FROM staff_profiles t
+WHERE t.business_id=$1 AND t.status='active'
+AND (NOT $2::boolean OR t.id > $3::uuid)
+ORDER BY t.id LIMIT $4
+`
+
+type ListStaffProfilesParams struct {
+	BusinessID pgtype.UUID
+	HasCursor  bool
+	AfterID    pgtype.UUID
+	PageSize   int32
+}
+
+func (q *Queries) ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error) {
+	rows, err := q.db.Query(ctx, listStaffProfiles,
+		arg.BusinessID,
+		arg.HasCursor,
+		arg.AfterID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StaffProfile
+	for rows.Next() {
+		var i StaffProfile
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.Name,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
