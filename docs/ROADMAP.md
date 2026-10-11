@@ -1311,14 +1311,14 @@ Only then should the phase be marked complete.
 
 # Current Development Position
 
-As of 2026-10-10, Phase 5.1 booking catalog schema/service foundation is complete.
-Phase 5 remains in progress. PHASE_5_BOOKING_ENGINE.md records tenant-owned locations,
-services, staff profiles and resources, database constraints, policies and verification.
-There are no catalog HTTP endpoints or booking operations in this milestone.
+As of 2026-10-11, Phase 5.2 protected catalog APIs, bounded pagination and same-business
+eligibility relationships are complete and verified. Phase 5 remains in progress.
+PHASE_5_BOOKING_ENGINE.md records routes, role policy, migration 000010, test evidence
+and limits. No booking creation or availability/capacity enforcement is implemented.
 
 Phase 4 business/membership development scope is complete. The user authorized
 progression with Apple live setup deferred. DEFERRED_WORK.md retains Apple, browser,
 race-detector and production checks without claiming unconditional Phase 3 closure.
 
-Next: Phase 5.2 protected catalog APIs, paginated reads and eligibility relationships.
-Scheduling and booking enforcement follow within Phase 5. Dashboards remain Phase 6.
+Next: Phase 5.3 business/location hours and scheduling rules. Availability and booking
+enforcement follow within Phase 5. Business dashboards remain Phase 6.

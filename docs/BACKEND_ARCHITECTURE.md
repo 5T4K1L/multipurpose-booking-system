@@ -263,3 +263,12 @@ runs create/read operations through WithinTenant. OWNER/ADMIN can create; curren
 members can read. Generated SQL scopes resource lookups by business_id and id, and
 resource creation resolves an active same-business location before insertion.
 No HTTP handlers or frontend flows are added yet. See PHASE_5_BOOKING_ENGINE.md.
+
+## Catalog HTTP and eligibility integration (Phase 5.2)
+
+Catalog handlers are registered alongside existing business routes, with session
+validation and explicit public response mapping. BookingCatalogService now exposes
+paginated entity/eligibility lists and same-business link mutations. All use the
+existing tenant transaction; failed commits expose no result or continuation cursor.
+Eligibility does not confer membership, availability or a capacity reservation.
+See PHASE_5_BOOKING_ENGINE.md for the implemented API contract and tests.

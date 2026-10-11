@@ -1016,3 +1016,14 @@ Optional limit is 1..100 (default 100). Continue with cursor from X-Next-Cursor,
 through CORS; absent header means completion. Invalid pagination returns 400.
 Cursors are bounded unsigned selectors, never authorization. Each page checks current
 identity/membership. See PHASE_4_MULTITENANCY.md for the full API and role contract.
+
+## Implemented catalog routes (Phase 5.2)
+
+The /api/v1/businesses/{businessID}/catalog/{kind} namespace supports create, get and
+paginated list for locations, services, staff and resources. Service-to-location/staff/
+resource and staff-to-location collections support list and idempotent PUT/DELETE links.
+Current membership is required; OWNER/ADMIN mutate, MANAGER/STAFF read. Public response
+fields are explicitly mapped, never raw database rows. Exact-origin mutation checks,
+strict bounded JSON, no-store responses and process-local rate limits apply.
+All lists use UUID keyset cursors scoped to actor/business/kind/parent as applicable.
+PHASE_5_BOOKING_ENGINE.md specifies the exact paths, fields, errors and limitations.

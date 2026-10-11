@@ -1194,3 +1194,13 @@ relationships. Restrictive deletion protects future history; lifecycle mutation 
 not implemented yet. Service duration and resource capacity have database checks.
 Location timezones are explicit. Staff profiles are separate from authentication
 identities and membership roles. See PHASE_5_BOOKING_ENGINE.md for exact boundaries.
+
+## Catalog eligibility relationships (Phase 5.2)
+
+Migration 000010 defines service_locations, service_staff, service_resources and
+staff_locations. Composite foreign keys include business_id for both endpoints;
+primary keys deduplicate links and reverse indexes support target-side access.
+Restrictive deletion avoids dangling relationships. Active-parent/target policy is
+checked by the tenant-scoped service; all writers must use the business lock.
+Eligibility is metadata and does not enforce schedules, capacity or booking conflicts.
+See PHASE_5_BOOKING_ENGINE.md for route semantics and verified boundaries.

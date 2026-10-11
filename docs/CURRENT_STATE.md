@@ -6,14 +6,15 @@ PHASE 5 - Core Booking Engine (in progress)
 
 ## Current Step
 
-5.1 - Tenant-owned booking catalog schema and service foundation completed (2026-10-10).
-See [PHASE_5_BOOKING_ENGINE.md](PHASE_5_BOOKING_ENGINE.md) for scope, policy and tests.
-Locations, services, staff profiles and resources now have scoped create/read service
-operations and database constraints. Catalog endpoints and screens are not present yet.
+5.2 - Protected catalog APIs, pagination and eligibility completed (2026-10-11).
+See [PHASE_5_BOOKING_ENGINE.md](PHASE_5_BOOKING_ENGINE.md) for routes, policy and tests.
+Locations, services, staff profiles and resources have create/get/list endpoints.
+Same-business service/location/staff/resource eligibility links support list/add/remove.
 Phase 4 business/membership development scope remains complete.
 
-Next: Phase 5.2 protected catalog APIs, paginated reads and eligibility relationships.
-Scheduling and booking enforcement follow; business dashboards remain Phase 6.
+Next: Phase 5.3 business/location hours and scheduling rules. Availability and booking
+enforcement follow. Catalog screens and business dashboards remain later frontend work.
+Item edit/archive workflows, booking creation and capacity enforcement are not present.
 
 Google remains enabled; Apple setup/live verification is deferred by user instruction.
 [DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple, browser, race-detector and

@@ -3,8 +3,8 @@
 ## Phase 5.1 - Booking catalog foundation
 
 Completed 2026-10-10. Phase 5 remains in progress.
-This milestone supplies database and application-service foundations only. There
-are no catalog HTTP endpoints or frontend screens yet, and no booking is created.
+This section records the Phase 5.1 foundation. Phase 5.2 below adds catalog HTTP
+endpoints; frontend screens and booking creation remain unimplemented.
 
 ### Data model
 
@@ -28,8 +28,8 @@ Resource capacity is a positive 32-bit integer. Capacity is metadata at this sta
 concurrent capacity allocation and overbooking protection are not yet implemented.
 
 Staff profiles do not create users, grant STAFF roles, or imply login access.
-Staff-to-service/location eligibility and optional identity linkage need explicit
-later workflows. Services and staff are business-level records; resources require
+Phase 5.2 adds staff-to-service/location eligibility. Optional identity linkage still
+needs an explicit later workflow. Services and staff are business-level records; resources require
 an active location belonging to that same business.
 
 A composite foreign key enforces (resource.business_id, resource.location_id) against
@@ -56,8 +56,8 @@ All operations use BusinessService.WithinTenant with current active membership:
 - Invalid input returns ErrInvalidCatalog; denied membership/policy returns ErrForbidden;
   storage or commit failures return ErrCatalogUnavailable without partial results.
 
-These are internal service results, not public HTTP schemas. Future handlers must
-map explicit response fields and errors instead of directly serializing database rows.
+These are internal service results, not public HTTP schemas. Phase 5.2 handlers map
+explicit response fields and errors instead of directly serializing database rows.
 
 ### Files and verification
 
@@ -79,10 +79,118 @@ The additive migration was applied through the existing API startup runner.
 No manual configuration is needed. Google remains enabled and Apple disabled.
 Earlier Apple, browser QA and race-detector checks remain in DEFERRED_WORK.md.
 
+## Phase 5.2 - Catalog APIs, pagination and eligibility
+
+Completed and verified 2026-10-11. Most implementation arrived in commit afc52db;
+completion review preserved it and added HTTP boundary, rate-limit and transaction
+failure coverage plus this API contract. Phase 5 remains in progress.
+
+### Catalog endpoints
+
+Base path: `/api/v1/businesses/{businessID}/catalog`.
+All endpoints require the existing session cookie and current active membership.
+Only OWNER and BUSINESS_ADMIN may mutate; MANAGER and STAFF may read. Global
+platform roles have no tenant bypass, and request headers cannot assign an actor/role.
+
+| Method | Suffix | Request / result |
+|---|---|---|
+| POST | /locations | `{ "name": "Main", "timezone": "Asia/Shanghai" }` |
+| POST | /services | `{ "name": "Consultation", "duration_minutes": 30 }` |
+| POST | /staff | `{ "name": "Alex" }` |
+| POST | /resources | `{ "name": "Room", "location_id": "UUID", "capacity": 2 }` |
+| GET | /{kind} | Paginated array of active catalog records |
+| GET | /{kind}/{id} | One active record in the authorized business |
+
+`kind` is locations, services, staff or resources. POST returns 201; GET returns 200.
+Public fields are id/name, plus timezone for locations, duration_minutes for services,
+and location_id/capacity for resources. No database timestamps, internal status or
+business_id fields are serialized. Resources at archived locations are hidden.
+Item update, delete and archive routes are not implemented and return 405.
+
+### Eligibility endpoints and meaning
+
+The following collection suffixes are supported:
+
+| Collection suffix | Meaning |
+|---|---|
+| /services/{serviceID}/locations | Locations eligible to offer a service |
+| /services/{serviceID}/staff | Staff eligible to deliver a service |
+| /services/{serviceID}/resources | Resources eligible for a service |
+| /staff/{staffID}/locations | Locations where a staff profile is eligible to work |
+
+GET on a collection returns a paginated array of target UUIDs. PUT on
+`{collection}/{targetID}` adds a link; DELETE removes it. Both return 204 and are
+idempotent. Link mutation requests have no body. Creation requires active same-business
+parent and target records. Removal can clean up an archived target's link, while the
+parent must still be active. Archived targets are omitted from lists; resource targets
+also require an active location.
+
+Migration 000010 creates service_locations, service_staff, service_resources and
+staff_locations. Composite foreign keys include business_id at both ends, preventing
+cross-tenant links independently of service checks. Primary keys prevent duplicate
+links; reverse-lookup indexes support target relationships. Restrictive deletion
+preserves referential integrity. Changes run inside the existing tenant transaction.
+
+These links are independent eligibility facts, not appointments, schedules, capacity
+reservations or automatic membership grants. Linking a resource does not auto-link its
+location; linking staff to a service does not auto-link their locations. The future
+availability/booking engine must check the applicable relationships together and
+apply hours, absences, lead time and capacity rules. No current booking enforcement
+or availability guarantee is implied by an eligibility link.
+
+### Pagination and HTTP safety
+
+All eight catalog/eligibility lists accept `limit=1..100` (default 100) and `cursor`.
+Responses remain arrays, including `[]` for empty lists. `X-Next-Cursor` is present
+only when another page exists and is exposed through credentialed CORS. Ordering is
+ascending UUID; the cursor contains the last returned UUID, actor, business, list kind,
+and parent for eligibility lists. It is bounded to 1024 characters. These unsigned
+cursors are selectors, not credentials; each page rechecks current membership.
+Pages are fresh reads, not a frozen export snapshot, so concurrent edits may change
+later pages. Cross-kind/business/actor/parent cursor reuse is rejected.
+
+Mutations require the exact configured WEB_ORIGIN. GET may omit Origin; a supplied
+foreign origin is rejected. OPTIONS requires the configured origin and handles
+preflight without a session. Responses use Cache-Control: no-store. Catalog mutations
+share a process-local limit of 60 attempts per transport peer per 15 minutes; forwarded
+IP headers cannot bypass it. Requests receive a ten-second service timeout.
+
+Creation requires application/json, caps the body at 4096 bytes, and rejects unknown
+fields, null, non-object input and trailing JSON. Errors are generic:
+
+- 400: invalid input, UUID, pagination or unexpected link body
+- 401: missing/invalid session or disabled account
+- 403: origin or tenant/role denied
+- 404: unknown route, missing/archived/other-business catalog record
+- 405: unsupported method; Allow lists permitted methods
+- 413: creation body exceeds the size limit
+- 415: unsupported creation content type
+- 429: mutation rate limit; Retry-After is 900 seconds
+- 503: authentication/storage/transaction failure, without database details or partial data
+
+### Verification and current limits
+
+Verified on 2026-10-11: sqlc regeneration (no generated drift), gofmt, database-enabled
+`go test ./... -count=1`, `go build ./...`, and `go vet ./...`. API health and provider
+discovery confirm normal startup with Google enabled and Apple disabled.
+
+Coverage includes real HTTP/session/database integration for all entity and link
+families, 105 entries in every list, current-role checks, forged headers, cross-tenant
+reads and foreign keys, archived targets, revoked cursor access, strict JSON, origin
+checks and unsupported lifecycle routes. Added tests cover allowed/rejected preflight,
+missing/duplicate cookies, transport-peer rate limiting, generic storage errors,
+transaction timeouts, link failures, and suppression of data/cursors on failed commits.
+Migration 000010 up/down/up is checked in a rollback-only isolated schema.
+
+No manual configuration is needed. There are still no catalog frontend screens,
+item edit/archive workflows, schedules, booking endpoints or capacity enforcement.
+Apple live setup, browser QA, Go race-detector and production scaling checks remain
+in DEFERRED_WORK.md. No production-readiness or external-security-review claim is made.
+
 ## Next milestone
 
-Phase 5.2: protected catalog management APIs with bounded paginated reads and
-explicit same-business service/staff/location/resource eligibility relationships.
-Availability calendars, hours/holidays, buffers and lead time follow before booking
-creation, cancellation, idempotency and double-booking/capacity enforcement.
-Business dashboards remain Phase 6.
+Phase 5.3: business/location hours and scheduling rules, including timezones, closed
+periods/holidays, buffers and lead time. Availability calculation and transactional
+booking creation, cancellation, idempotency and capacity/double-booking protection
+follow within Phase 5. Catalog lifecycle editing needs an explicit workflow before
+it is added. Business dashboards remain Phase 6.
