@@ -299,4 +299,26 @@ func TestBookingCatalogMigrationRoundTrip(t *testing.T) {
 			}
 		}
 	}
+	availabilityUp, err := os.ReadFile("../../../../migrations/000012_availability_windows.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	availabilityDown, err := os.ReadFile("../../../../migrations/000012_availability_windows.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []struct {
+		sql    []byte
+		exists bool
+	}{{availabilityUp, true}, {availabilityDown, false}, {availabilityUp, true}} {
+		if _, err := tx.Exec(ctx, string(step.sql)); err != nil {
+			t.Fatal(err)
+		}
+		for _, table := range []string{"staff_availability_windows", "resource_availability_windows"} {
+			var exists bool
+			if err := tx.QueryRow(ctx, "SELECT to_regclass($1) IS NOT NULL", schema+"."+table).Scan(&exists); err != nil || exists != step.exists {
+				t.Fatal(table, exists, err)
+			}
+		}
+	}
 }

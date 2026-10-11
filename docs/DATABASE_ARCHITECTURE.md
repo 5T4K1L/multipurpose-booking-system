@@ -1214,3 +1214,12 @@ range/order checks and primary keys enforce stored integrity. Overlap validation
 bounded whole-schedule replacement run under the existing business transaction lock.
 These tables configure rules; they do not enforce booking conflicts or calculate slots.
 See SCHEDULING.md for exact semantics, limits and verification.
+
+## Availability windows (Phase 5.4)
+
+Migration 000012 adds staff_availability_windows and resource_availability_windows.
+Finite timestamptz intervals and composite tenant/entity foreign keys enforce temporal
+and ownership integrity. The service bounds replacements to 32 nonoverlapping windows
+and runs them under the business lock. Slot computation reads these windows alongside
+scoped eligibility and schedules. These tables contain no reservations; booking
+conflict/capacity enforcement is a separate next milestone. See AVAILABILITY.md.

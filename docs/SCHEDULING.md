@@ -106,10 +106,9 @@ The additive migration is applied by normal API startup. No manual configuration
 is required. API health and Google provider discovery passed. Apple, browser QA,
 race-detector and production checks remain deferred in DEFERRED_WORK.md.
 
-## Next task
+## Subsequent implementation
 
-Phase 5.4: staff/resource availability and timezone-aware slot calculation, including
-DST behavior and the intersection of eligibility, location hours, closed dates,
-service duration, buffers and lead time. Booking creation, cancellation, idempotency
-and transactional capacity/double-booking protection remain later Phase 5 work.
-There are no scheduling frontend screens in this milestone.
+Phase 5.4 applies these rules to timezone-aware advisory slot calculation and adds
+explicit staff/resource availability windows. See AVAILABILITY.md for API semantics,
+DST handling, tests and limitations. Transactional booking/capacity enforcement is
+next in Phase 5.5; a returned slot does not reserve anything.

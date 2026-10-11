@@ -1,0 +1,2 @@
+DROP TABLE resource_availability_windows;
+DROP TABLE staff_availability_windows;

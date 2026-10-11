@@ -201,9 +201,22 @@ round trips, cross-tenant/role denial, actual rollback injection and concurrent
 replacement tests. No manual setup or frontend changes are required. Google stays
 enabled; Apple and prior release checks remain deferred.
 
+## Phase 5.4 - Availability windows and advisory slots
+
+Completed 2026-10-11. [AVAILABILITY.md](AVAILABILITY.md) records the exact APIs,
+UTC window semantics, DST behavior, limits and verification. Staff/resources now
+have protected availability-window GET/PUT; services expose GET advisory slots for
+one local date, optionally filtered by a selected staff profile and resource.
+
+Slot calculation intersects active tenant records, explicit eligibility, location
+hours, closed dates, duration, buffers, lead time and selected availability windows.
+Missing configuration/eligibility/windows fails closed. Repeated and skipped local
+times are handled through real instants. No booking or capacity reservation is made.
+Migration 000012 and the full database-enabled tests/build/vet checks passed.
+
 ## Next milestone
 
-Phase 5.4: staff/resource availability and timezone-aware slot calculation. Apply
-eligibility, local hours, closures, duration, buffers and lead time, with explicit DST
-behavior. Booking creation, cancellation, idempotency and capacity/double-booking
-protection follow within Phase 5. Business dashboards remain Phase 6.
+Phase 5.5: transactional booking creation, idempotency and database-backed conflict/
+capacity protection. Revalidate all scheduling and eligibility facts when booking.
+Cancellation and modification require explicit lifecycle rules. Dashboards remain
+Phase 6. Apple and previous release checks remain in DEFERRED_WORK.md.

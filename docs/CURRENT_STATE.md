@@ -6,16 +6,15 @@ PHASE 5 - Core Booking Engine (in progress)
 
 ## Current Step
 
-5.3 - Location hours, closed dates and service scheduling rules completed (2026-10-11).
-See [SCHEDULING.md](SCHEDULING.md) for APIs, limits, rules and tests; Phase 5 history is
-in [PHASE_5_BOOKING_ENGINE.md](PHASE_5_BOOKING_ENGINE.md).
+5.4 - Availability windows and timezone-aware advisory slots completed (2026-10-11).
+See [AVAILABILITY.md](AVAILABILITY.md) for routes, semantics, limits and tests.
+Staff/resources have explicit availability-window GET/PUT; services have protected
+single-date slot queries with optional staff/resource selections. Slot results are
+advisory and do not reserve capacity or imply successful booking.
 
-Locations have atomic weekly-hours/closed-date GET/PUT. Services have buffer and
-minimum-lead-time GET/PUT. Catalog and eligibility APIs remain available.
+Next: Phase 5.5 transactional booking creation, idempotency and conflict/capacity
+protection. Booking and scheduling frontend screens are not present.
 Phase 4 business/membership development scope remains complete.
-
-Next: Phase 5.4 staff/resource availability and timezone-aware slot calculation.
-Booking creation, capacity enforcement and scheduling frontend screens are not present.
 
 Google remains enabled; Apple setup/live verification is deferred by user instruction.
 [DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple, browser, race-detector and

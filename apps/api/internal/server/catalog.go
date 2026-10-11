@@ -173,6 +173,10 @@ func NewCatalogHandler(sessions sessionValidator, catalog *service.BookingCatalo
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
+		if catalogAvailabilityRoute(r.PathValue("kind"), r.PathValue("relation")) {
+			serveAvailability(w, r.WithContext(ctx), catalog, actor.UserID, business, id)
+			return
+		}
 		if catalogSchedulingRoute(r.PathValue("kind"), r.PathValue("relation")) {
 			serveScheduling(w, r.WithContext(ctx), catalog, actor.UserID, business, id)
 			return
@@ -225,7 +229,16 @@ func NewCatalogHandler(sessions sessionValidator, catalog *service.BookingCatalo
 			methods = "GET, OPTIONS"
 		}
 		if rel := r.PathValue("relation"); rel != "" {
-			if catalogSchedulingRoute(kind, rel) {
+			if catalogAvailabilityRoute(kind, rel) {
+				if r.PathValue("targetID") != "" {
+					catalogFailure(w, 404, "NOT_FOUND")
+					return
+				}
+				methods = "GET, PUT, OPTIONS"
+				if rel == "slots" {
+					methods = "GET, OPTIONS"
+				}
+			} else if catalogSchedulingRoute(kind, rel) {
 				if r.PathValue("targetID") != "" {
 					catalogFailure(w, 404, "NOT_FOUND")
 					return

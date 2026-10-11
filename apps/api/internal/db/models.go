@@ -58,6 +58,13 @@ type Resource struct {
 	UpdatedAt  pgtype.Timestamptz
 }
 
+type ResourceAvailabilityWindow struct {
+	BusinessID pgtype.UUID
+	ResourceID pgtype.UUID
+	StartsAt   pgtype.Timestamptz
+	EndsAt     pgtype.Timestamptz
+}
+
 type Service struct {
 	ID              pgtype.UUID
 	BusinessID      pgtype.UUID
@@ -96,6 +103,13 @@ type ServiceStaff struct {
 	ServiceID  pgtype.UUID
 	StaffID    pgtype.UUID
 	CreatedAt  pgtype.Timestamptz
+}
+
+type StaffAvailabilityWindow struct {
+	BusinessID pgtype.UUID
+	StaffID    pgtype.UUID
+	StartsAt   pgtype.Timestamptz
+	EndsAt     pgtype.Timestamptz
 }
 
 type StaffLocation struct {
