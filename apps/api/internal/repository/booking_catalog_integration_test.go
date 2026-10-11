@@ -277,4 +277,26 @@ func TestBookingCatalogMigrationRoundTrip(t *testing.T) {
 			}
 		}
 	}
+	schedulingUp, err := os.ReadFile("../../../../migrations/000011_scheduling_rules.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	schedulingDown, err := os.ReadFile("../../../../migrations/000011_scheduling_rules.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []struct {
+		sql    []byte
+		exists bool
+	}{{schedulingUp, true}, {schedulingDown, false}, {schedulingUp, true}} {
+		if _, err := tx.Exec(ctx, string(step.sql)); err != nil {
+			t.Fatal(err)
+		}
+		for _, table := range []string{"location_weekly_hours", "location_closed_dates", "service_scheduling_rules"} {
+			var exists bool
+			if err := tx.QueryRow(ctx, "SELECT to_regclass($1) IS NOT NULL", schema+"."+table).Scan(&exists); err != nil || exists != step.exists {
+				t.Fatal(table, exists, err)
+			}
+		}
+	}
 }

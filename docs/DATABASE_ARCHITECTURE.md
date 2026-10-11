@@ -1204,3 +1204,13 @@ Restrictive deletion avoids dangling relationships. Active-parent/target policy 
 checked by the tenant-scoped service; all writers must use the business lock.
 Eligibility is metadata and does not enforce schedules, capacity or booking conflicts.
 See PHASE_5_BOOKING_ENGINE.md for route semantics and verified boundaries.
+
+## Scheduling configuration (Phase 5.3)
+
+Migration 000011 adds tenant-scoped location_weekly_hours, location_closed_dates and
+service_scheduling_rules. Hours are weekday/local-minute pairs, closed dates are DATE,
+and buffers/lead time are bounded integer minutes. Composite tenant foreign keys,
+range/order checks and primary keys enforce stored integrity. Overlap validation and
+bounded whole-schedule replacement run under the existing business transaction lock.
+These tables configure rules; they do not enforce booking conflicts or calculate slots.
+See SCHEDULING.md for exact semantics, limits and verification.

@@ -22,6 +22,7 @@ var (
 // BookingCatalogStore is implemented by sqlc on the existing tenant transaction.
 // All lookups require business_id as well as id; unscoped lookups are unavailable.
 type BookingCatalogStore interface {
+	SchedulingStore
 	CatalogListStore
 	CatalogEligibilityStore
 	CreateLocation(context.Context, db.CreateLocationParams) (db.Location, error)

@@ -33,6 +33,20 @@ type Location struct {
 	UpdatedAt  pgtype.Timestamptz
 }
 
+type LocationClosedDate struct {
+	BusinessID pgtype.UUID
+	LocationID pgtype.UUID
+	ClosedDate pgtype.Date
+}
+
+type LocationWeeklyHour struct {
+	BusinessID  pgtype.UUID
+	LocationID  pgtype.UUID
+	Weekday     int32
+	StartMinute int32
+	EndMinute   int32
+}
+
 type Resource struct {
 	ID         pgtype.UUID
 	BusinessID pgtype.UUID
@@ -66,6 +80,15 @@ type ServiceResource struct {
 	ServiceID  pgtype.UUID
 	ResourceID pgtype.UUID
 	CreatedAt  pgtype.Timestamptz
+}
+
+type ServiceSchedulingRule struct {
+	BusinessID          pgtype.UUID
+	ServiceID           pgtype.UUID
+	BufferBeforeMinutes int32
+	BufferAfterMinutes  int32
+	MinimumLeadMinutes  int32
+	UpdatedAt           pgtype.Timestamptz
 }
 
 type ServiceStaff struct {

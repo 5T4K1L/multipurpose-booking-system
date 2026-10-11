@@ -6,15 +6,16 @@ PHASE 5 - Core Booking Engine (in progress)
 
 ## Current Step
 
-5.2 - Protected catalog APIs, pagination and eligibility completed (2026-10-11).
-See [PHASE_5_BOOKING_ENGINE.md](PHASE_5_BOOKING_ENGINE.md) for routes, policy and tests.
-Locations, services, staff profiles and resources have create/get/list endpoints.
-Same-business service/location/staff/resource eligibility links support list/add/remove.
+5.3 - Location hours, closed dates and service scheduling rules completed (2026-10-11).
+See [SCHEDULING.md](SCHEDULING.md) for APIs, limits, rules and tests; Phase 5 history is
+in [PHASE_5_BOOKING_ENGINE.md](PHASE_5_BOOKING_ENGINE.md).
+
+Locations have atomic weekly-hours/closed-date GET/PUT. Services have buffer and
+minimum-lead-time GET/PUT. Catalog and eligibility APIs remain available.
 Phase 4 business/membership development scope remains complete.
 
-Next: Phase 5.3 business/location hours and scheduling rules. Availability and booking
-enforcement follow. Catalog screens and business dashboards remain later frontend work.
-Item edit/archive workflows, booking creation and capacity enforcement are not present.
+Next: Phase 5.4 staff/resource availability and timezone-aware slot calculation.
+Booking creation, capacity enforcement and scheduling frontend screens are not present.
 
 Google remains enabled; Apple setup/live verification is deferred by user instruction.
 [DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple, browser, race-detector and

@@ -183,14 +183,27 @@ transaction timeouts, link failures, and suppression of data/cursors on failed c
 Migration 000010 up/down/up is checked in a rollback-only isolated schema.
 
 No manual configuration is needed. There are still no catalog frontend screens,
-item edit/archive workflows, schedules, booking endpoints or capacity enforcement.
+item edit/archive workflows, booking endpoints or capacity enforcement. Phase 5.3 adds scheduling configuration below.
 Apple live setup, browser QA, Go race-detector and production scaling checks remain
 in DEFERRED_WORK.md. No production-readiness or external-security-review claim is made.
 
+## Phase 5.3 - Location hours and scheduling rules
+
+Completed 2026-10-11. See [SCHEDULING.md](SCHEDULING.md) for the exact API and semantics.
+Location schedule GET/PUT manages weekly local-minute intervals and explicit full-day
+closures. Service scheduling-rule GET/PUT manages before/after buffers and minimum
+lead time. Both use existing catalog authentication, role/origin checks and transactions.
+Migration 000011 enforces tenant foreign keys and value constraints. Schedule replacement
+is atomic, bounded, overlap-validated and serialized by the business lock.
+
+Verification passed: sqlc, gofmt, full database-enabled Go tests, build, vet, migration
+round trips, cross-tenant/role denial, actual rollback injection and concurrent
+replacement tests. No manual setup or frontend changes are required. Google stays
+enabled; Apple and prior release checks remain deferred.
+
 ## Next milestone
 
-Phase 5.3: business/location hours and scheduling rules, including timezones, closed
-periods/holidays, buffers and lead time. Availability calculation and transactional
-booking creation, cancellation, idempotency and capacity/double-booking protection
-follow within Phase 5. Catalog lifecycle editing needs an explicit workflow before
-it is added. Business dashboards remain Phase 6.
+Phase 5.4: staff/resource availability and timezone-aware slot calculation. Apply
+eligibility, local hours, closures, duration, buffers and lead time, with explicit DST
+behavior. Booking creation, cancellation, idempotency and capacity/double-booking
+protection follow within Phase 5. Business dashboards remain Phase 6.
