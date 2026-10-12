@@ -1311,14 +1311,14 @@ Only then should the phase be marked complete.
 
 # Current Development Position
 
-As of 2026-10-11, Phase 5.4 availability windows and advisory slot calculation are
-complete. Phase 5 remains in progress. AVAILABILITY.md records migration 000012,
-protected APIs, timezone/DST semantics, limits and test evidence. No booking or
-capacity reservation is implemented; advisory results may become stale.
+As of 2026-10-12, Phase 5.5 transactional booking creation is complete. Phase 5
+remains in progress. BOOKINGS.md records migration 000013, the tenant-admin POST API,
+durable idempotency, configuration revalidation and database occupancy protection.
+Advisory slots remain non-reserving and do not subtract existing bookings.
 
 Phase 4 business/membership development scope is complete. DEFERRED_WORK.md retains
 user-deferred Apple setup and outstanding browser/race/production checks without
 claiming unconditional Phase 3 closure.
 
-Next: Phase 5.5 transactional booking creation with idempotency and database-backed
-conflict/capacity protection. Dashboards remain Phase 6.
+Next: Phase 5.6 booking lifecycle rules and protected cancellation/rescheduling.
+Dashboards remain Phase 6; customer self-service and booking frontend are not present.

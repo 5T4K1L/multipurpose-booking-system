@@ -30,80 +30,85 @@ func (s *BookingCatalogService) CalculateSlots(ctx context.Context, actor int64,
 		return SlotResult{}, ErrInvalidCatalog
 	}
 	return catalogOperation(ctx, s, actor, business, false, func(q BookingCatalogStore, a TenantAccess) (SlotResult, error) {
-		offered, e := q.GetService(ctx, db.GetServiceParams{BusinessID: a.BusinessID(), ID: id})
-		if e != nil {
-			return SlotResult{}, e
-		}
-		loc, e := q.GetLocation(ctx, db.GetLocationParams{BusinessID: a.BusinessID(), ID: in.LocationID})
-		if e != nil {
-			return SlotResult{}, e
-		}
-		zone, e := time.LoadLocation(loc.Timezone)
-		if e != nil {
-			return SlotResult{}, e
-		}
-		result := SlotResult{Date: in.Date, Timezone: loc.Timezone, Advisory: true, Slots: []Slot{}}
-		windows := [][]AvailabilityWindow{}
-		if in.StaffID.Valid {
-			if e := availabilityEntity(ctx, q, a.BusinessID(), in.StaffID, "staff"); e != nil {
-				return SlotResult{}, e
-			}
-			w, e := availabilityWindows(ctx, q, a.BusinessID(), in.StaffID, "staff")
-			if e != nil {
-				return SlotResult{}, e
-			}
-			windows = append(windows, w)
-		}
-		if in.ResourceID.Valid {
-			r, e := q.GetResource(ctx, db.GetResourceParams{BusinessID: a.BusinessID(), ID: in.ResourceID})
-			if e != nil {
-				return SlotResult{}, e
-			}
-			if r.LocationID != in.LocationID {
-				return result, nil
-			}
-			w, e := availabilityWindows(ctx, q, a.BusinessID(), in.ResourceID, "resources")
-			if e != nil {
-				return SlotResult{}, e
-			}
-			windows = append(windows, w)
-		}
-		eligible, e := q.CheckSlotEligibility(ctx, db.CheckSlotEligibilityParams{BusinessID: a.BusinessID(), ServiceID: id, LocationID: in.LocationID, WithStaff: in.StaffID.Valid, StaffID: in.StaffID, WithResource: in.ResourceID.Valid, ResourceID: in.ResourceID})
-		if e != nil {
-			return SlotResult{}, e
-		}
-		if !eligible.ServiceLocation || !eligible.StaffEligible.Valid || !eligible.StaffEligible.Bool || !eligible.ResourceEligible.Valid || !eligible.ResourceEligible.Bool {
-			return result, nil
-		}
-		rules, e := q.GetServiceSchedulingRules(ctx, db.GetServiceSchedulingRulesParams{BusinessID: a.BusinessID(), ServiceID: id})
-		if errors.Is(e, pgx.ErrNoRows) {
-			return result, nil
-		}
-		if e != nil {
-			return SlotResult{}, e
-		}
-		hours, e := q.ListLocationWeeklyHours(ctx, db.ListLocationWeeklyHoursParams{BusinessID: a.BusinessID(), LocationID: in.LocationID})
-		if e != nil {
-			return SlotResult{}, e
-		}
-		dates, e := q.ListLocationClosedDates(ctx, db.ListLocationClosedDatesParams{BusinessID: a.BusinessID(), LocationID: in.LocationID})
-		if e != nil {
-			return SlotResult{}, e
-		}
-		weekly := []WeeklyHours{}
-		for _, h := range hours {
-			weekly = append(weekly, WeeklyHours{h.Weekday, h.StartMinute, h.EndMinute})
-		}
-		closed := map[string]bool{}
-		for _, d := range dates {
-			closed[d.Time.Format("2006-01-02")] = true
-		}
-		result.Slots, e = calculateSlots(ctx, day, zone, weekly, closed, offered.DurationMinutes, SchedulingRulesInput{rules.BufferBeforeMinutes, rules.BufferAfterMinutes, rules.MinimumLeadMinutes}, windows, time.Now().UTC())
-		if e != nil {
-			return SlotResult{}, e
-		}
-		return result, nil
+		return calculateCatalogSlots(ctx, q, a, id, in, day)
 	})
+}
+
+// Shared by advisory reads and booking creation inside the caller's transaction.
+func calculateCatalogSlots(ctx context.Context, q BookingCatalogStore, a TenantAccess, id pgtype.UUID, in SlotRequest, day time.Time) (SlotResult, error) {
+	offered, e := q.GetService(ctx, db.GetServiceParams{BusinessID: a.BusinessID(), ID: id})
+	if e != nil {
+		return SlotResult{}, e
+	}
+	loc, e := q.GetLocation(ctx, db.GetLocationParams{BusinessID: a.BusinessID(), ID: in.LocationID})
+	if e != nil {
+		return SlotResult{}, e
+	}
+	zone, e := time.LoadLocation(loc.Timezone)
+	if e != nil {
+		return SlotResult{}, e
+	}
+	result := SlotResult{Date: in.Date, Timezone: loc.Timezone, Advisory: true, Slots: []Slot{}}
+	windows := [][]AvailabilityWindow{}
+	if in.StaffID.Valid {
+		if e := availabilityEntity(ctx, q, a.BusinessID(), in.StaffID, "staff"); e != nil {
+			return SlotResult{}, e
+		}
+		w, e := availabilityWindows(ctx, q, a.BusinessID(), in.StaffID, "staff")
+		if e != nil {
+			return SlotResult{}, e
+		}
+		windows = append(windows, w)
+	}
+	if in.ResourceID.Valid {
+		r, e := q.GetResource(ctx, db.GetResourceParams{BusinessID: a.BusinessID(), ID: in.ResourceID})
+		if e != nil {
+			return SlotResult{}, e
+		}
+		if r.LocationID != in.LocationID {
+			return result, nil
+		}
+		w, e := availabilityWindows(ctx, q, a.BusinessID(), in.ResourceID, "resources")
+		if e != nil {
+			return SlotResult{}, e
+		}
+		windows = append(windows, w)
+	}
+	eligible, e := q.CheckSlotEligibility(ctx, db.CheckSlotEligibilityParams{BusinessID: a.BusinessID(), ServiceID: id, LocationID: in.LocationID, WithStaff: in.StaffID.Valid, StaffID: in.StaffID, WithResource: in.ResourceID.Valid, ResourceID: in.ResourceID})
+	if e != nil {
+		return SlotResult{}, e
+	}
+	if !eligible.ServiceLocation || !eligible.StaffEligible.Valid || !eligible.StaffEligible.Bool || !eligible.ResourceEligible.Valid || !eligible.ResourceEligible.Bool {
+		return result, nil
+	}
+	rules, e := q.GetServiceSchedulingRules(ctx, db.GetServiceSchedulingRulesParams{BusinessID: a.BusinessID(), ServiceID: id})
+	if errors.Is(e, pgx.ErrNoRows) {
+		return result, nil
+	}
+	if e != nil {
+		return SlotResult{}, e
+	}
+	hours, e := q.ListLocationWeeklyHours(ctx, db.ListLocationWeeklyHoursParams{BusinessID: a.BusinessID(), LocationID: in.LocationID})
+	if e != nil {
+		return SlotResult{}, e
+	}
+	dates, e := q.ListLocationClosedDates(ctx, db.ListLocationClosedDatesParams{BusinessID: a.BusinessID(), LocationID: in.LocationID})
+	if e != nil {
+		return SlotResult{}, e
+	}
+	weekly := []WeeklyHours{}
+	for _, h := range hours {
+		weekly = append(weekly, WeeklyHours{h.Weekday, h.StartMinute, h.EndMinute})
+	}
+	closed := map[string]bool{}
+	for _, d := range dates {
+		closed[d.Time.Format("2006-01-02")] = true
+	}
+	result.Slots, e = calculateSlots(ctx, day, zone, weekly, closed, offered.DurationMinutes, SchedulingRulesInput{rules.BufferBeforeMinutes, rules.BufferAfterMinutes, rules.MinimumLeadMinutes}, windows, time.Now().UTC())
+	if e != nil {
+		return SlotResult{}, e
+	}
+	return result, nil
 }
 func windowCovers(windows []AvailabilityWindow, start, end time.Time) bool {
 	for _, w := range windows {

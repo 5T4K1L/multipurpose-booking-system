@@ -83,6 +83,11 @@ func main() {
 		log.Fatal(err)
 	}
 	server.RegisterCatalogRoutes(mux, catalogHandler)
+	bookingHandler, err := server.NewBookingHandler(sessionService, service.NewBookingService(businessService), webOrigin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mux.Handle("/api/v1/businesses/{businessID}/bookings", bookingHandler)
 	oauthConfig, err := auth.LoadEnabledOAuthConfig()
 	if err != nil {
 		log.Fatal(err)

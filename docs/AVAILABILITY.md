@@ -120,10 +120,11 @@ keys and actual failed-window-replacement rollback preserving previous data.
 API health and Google provider discovery passed. No manual setup is required.
 Apple, browser QA, race-detector and production checks remain in DEFERRED_WORK.md.
 
-## Next task
+## Booking integration (Phase 5.5)
 
-Phase 5.5: transactional booking creation with idempotency and database-backed
-staff/resource conflict/capacity protection. Revalidate eligibility, scheduling and
-availability inside the booking transaction; advisory slot responses never authorize
-or reserve a booking. Cancellation and modification need explicit lifecycle rules.
-No booking frontend screens or public customer availability routes are added here.
+[BOOKINGS.md](BOOKINGS.md) documents transactional creation, durable idempotency and
+database-enforced buffered staff/resource occupancy. Creation reuses the same slot
+calculation inside its tenant transaction and rejects stale advisory results.
+Advisory slots still do not subtract existing bookings or reserve capacity.
+Cancellation/rescheduling rules are the next milestone. No booking frontend or public
+customer availability route is introduced.

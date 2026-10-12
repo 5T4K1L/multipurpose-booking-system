@@ -1222,4 +1222,19 @@ Finite timestamptz intervals and composite tenant/entity foreign keys enforce te
 and ownership integrity. The service bounds replacements to 32 nonoverlapping windows
 and runs them under the business lock. Slot computation reads these windows alongside
 scoped eligibility and schedules. These tables contain no reservations; booking
-conflict/capacity enforcement is a separate next milestone. See AVAILABILITY.md.
+conflict/capacity enforcement is implemented separately in Phase 5.5. See AVAILABILITY.md.
+
+
+## Booking creation (Phase 5.5)
+
+Migration 000013 adds confirmed bookings, audit actor, immutable time/buffer snapshots,
+composite tenant foreign keys, a unique (business_id,created_by,idempotency_key),
+request digest and occupancy indexes. A BEFORE INSERT trigger serializes writers by
+updating the tenant row, then enforces exclusive staff and peak resource capacity
+across half-open buffered intervals. Direct SQL inserts receive the same occupancy
+protection; stale repeatable-read writers abort rather than overbook.
+
+Booking updates and capacity/location/tenant changes to booked resources are rejected
+pending lifecycle rules. No lifecycle endpoints or customer identity model are added.
+Service transactions revalidate schedules/eligibility and publish results only after
+commit. See BOOKINGS.md for the exact API, transaction semantics, tests and limits.

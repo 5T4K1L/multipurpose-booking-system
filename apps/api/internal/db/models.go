@@ -8,6 +8,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Booking struct {
+	ID             pgtype.UUID
+	BusinessID     pgtype.UUID
+	ServiceID      pgtype.UUID
+	LocationID     pgtype.UUID
+	StaffID        pgtype.UUID
+	ResourceID     pgtype.UUID
+	CreatedBy      int64
+	IdempotencyKey string
+	RequestHash    string
+	StartsAt       pgtype.Timestamptz
+	EndsAt         pgtype.Timestamptz
+	BusyStartsAt   pgtype.Timestamptz
+	BusyEndsAt     pgtype.Timestamptz
+	Status         string
+	CreatedAt      pgtype.Timestamptz
+}
+
 type Business struct {
 	ID        pgtype.UUID
 	Name      string

@@ -214,9 +214,19 @@ Missing configuration/eligibility/windows fails closed. Repeated and skipped loc
 times are handled through real instants. No booking or capacity reservation is made.
 Migration 000012 and the full database-enabled tests/build/vet checks passed.
 
+## Phase 5.5 - Transactional booking creation
+
+Completed 2026-10-12. [BOOKINGS.md](BOOKINGS.md) records the protected tenant-admin
+POST API, durable actor-scoped idempotency, buffered occupancy and database triggers.
+Creation rechecks the shared availability calculation inside the tenant transaction.
+Concurrent staff/resource protection applies even to direct SQL inserts; peak resource
+occupancy preserves valid adjacent/spanning bookings. Migration 000013 is applied.
+
+Full database-enabled tests, build and vet passed. No frontend or manual configuration
+is required. Advisory slots remain non-reserving and do not subtract existing bookings.
+
 ## Next milestone
 
-Phase 5.5: transactional booking creation, idempotency and database-backed conflict/
-capacity protection. Revalidate all scheduling and eligibility facts when booking.
-Cancellation and modification require explicit lifecycle rules. Dashboards remain
-Phase 6. Apple and previous release checks remain in DEFERRED_WORK.md.
+Phase 5.6: booking lifecycle - define cancellation/rescheduling authorization,
+state transitions and capacity release, then implement protected operations.
+Dashboards remain Phase 6. Apple and previous release checks remain in DEFERRED_WORK.md.

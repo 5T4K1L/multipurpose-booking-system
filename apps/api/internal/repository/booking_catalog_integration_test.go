@@ -321,4 +321,25 @@ func TestBookingCatalogMigrationRoundTrip(t *testing.T) {
 			}
 		}
 	}
+	bookingUp, err := os.ReadFile("../../../../migrations/000013_bookings.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bookingDown, err := os.ReadFile("../../../../migrations/000013_bookings.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []struct {
+		sql    []byte
+		exists bool
+	}{{bookingUp, true}, {bookingDown, false}, {bookingUp, true}} {
+		if _, err := tx.Exec(ctx, string(step.sql)); err != nil {
+			t.Fatal(err)
+		}
+		var exists bool
+		if err := tx.QueryRow(ctx, "SELECT to_regclass($1) IS NOT NULL", schema+".bookings").Scan(&exists); err != nil || exists != step.exists {
+			t.Fatal(exists, err)
+		}
+	}
+
 }

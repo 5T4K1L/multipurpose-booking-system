@@ -6,14 +6,14 @@ PHASE 5 - Core Booking Engine (in progress)
 
 ## Current Step
 
-5.4 - Availability windows and timezone-aware advisory slots completed (2026-10-11).
-See [AVAILABILITY.md](AVAILABILITY.md) for routes, semantics, limits and tests.
-Staff/resources have explicit availability-window GET/PUT; services have protected
-single-date slot queries with optional staff/resource selections. Slot results are
-advisory and do not reserve capacity or imply successful booking.
+5.5 - Transactional booking creation completed (2026-10-12).
+See [BOOKINGS.md](BOOKINGS.md) for the tenant-admin POST API, durable idempotency,
+current-configuration validation and database-enforced staff/resource occupancy.
+Migration 000013 is applied. Full database-enabled tests, build and vet passed.
+Advisory slots still do not reserve or subtract bookings; creation is authoritative.
 
-Next: Phase 5.5 transactional booking creation, idempotency and conflict/capacity
-protection. Booking and scheduling frontend screens are not present.
+Next: Phase 5.6 booking lifecycle rules and protected cancellation/rescheduling.
+Booking and scheduling frontend screens and customer self-service are not present.
 Phase 4 business/membership development scope remains complete.
 
 Google remains enabled; Apple setup/live verification is deferred by user instruction.
