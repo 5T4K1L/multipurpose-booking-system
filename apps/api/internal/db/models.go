@@ -9,20 +9,34 @@ import (
 )
 
 type Booking struct {
-	ID             pgtype.UUID
+	ID                  pgtype.UUID
+	BusinessID          pgtype.UUID
+	ServiceID           pgtype.UUID
+	LocationID          pgtype.UUID
+	StaffID             pgtype.UUID
+	ResourceID          pgtype.UUID
+	CreatedBy           int64
+	IdempotencyKey      string
+	RequestHash         string
+	StartsAt            pgtype.Timestamptz
+	EndsAt              pgtype.Timestamptz
+	BusyStartsAt        pgtype.Timestamptz
+	BusyEndsAt          pgtype.Timestamptz
+	Status              string
+	CreatedAt           pgtype.Timestamptz
+	ClosedAt            pgtype.Timestamptz
+	ClosedBy            pgtype.Int8
+	SupersedesBookingID pgtype.UUID
+}
+
+type BookingChange struct {
 	BusinessID     pgtype.UUID
-	ServiceID      pgtype.UUID
-	LocationID     pgtype.UUID
-	StaffID        pgtype.UUID
-	ResourceID     pgtype.UUID
-	CreatedBy      int64
+	ActorID        int64
 	IdempotencyKey string
+	BookingID      pgtype.UUID
+	Action         string
 	RequestHash    string
-	StartsAt       pgtype.Timestamptz
-	EndsAt         pgtype.Timestamptz
-	BusyStartsAt   pgtype.Timestamptz
-	BusyEndsAt     pgtype.Timestamptz
-	Status         string
+	Response       []byte
 	CreatedAt      pgtype.Timestamptz
 }
 

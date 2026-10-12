@@ -126,5 +126,6 @@ Apple, browser QA, race-detector and production checks remain in DEFERRED_WORK.m
 database-enforced buffered staff/resource occupancy. Creation reuses the same slot
 calculation inside its tenant transaction and rejects stale advisory results.
 Advisory slots still do not subtract existing bookings or reserve capacity.
-Cancellation/rescheduling rules are the next milestone. No booking frontend or public
-customer availability route is introduced.
+Phase 5.6 cancellation/rescheduling now releases or replaces occupancy atomically;
+see BOOKING_LIFECYCLE.md. Next is booking read APIs and occupancy-aware advisory
+availability. No booking frontend or public customer availability route is introduced.

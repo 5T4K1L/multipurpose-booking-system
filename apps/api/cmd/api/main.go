@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	mux.Handle("/api/v1/businesses/{businessID}/bookings", bookingHandler)
+	server.RegisterBookingRoutes(mux, bookingHandler)
 	oauthConfig, err := auth.LoadEnabledOAuthConfig()
 	if err != nil {
 		log.Fatal(err)

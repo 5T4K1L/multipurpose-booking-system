@@ -1238,3 +1238,20 @@ Booking updates and capacity/location/tenant changes to booked resources are rej
 pending lifecycle rules. No lifecycle endpoints or customer identity model are added.
 Service transactions revalidate schedules/eligibility and publish results only after
 commit. See BOOKINGS.md for the exact API, transaction semantics, tests and limits.
+
+
+## Booking lifecycle (Phase 5.6)
+
+Migration 000014 extends booking status to confirmed/cancelled/rescheduled and adds
+closed_at, closed_by and a unique same-tenant supersedes_booking_id. Original
+identity/interval snapshots remain immutable. Booking_changes records actor-scoped
+idempotency keys, action/target/request digest and durable operation response JSON.
+Creation and lifecycle retry namespaces are separate; each preserves its original
+response after later state changes.
+
+Only confirmed bookings occupy staff/resources. Transition guards serialize with
+insert writers, enforce the pre-buffer cutoff and prohibit terminal reactivation.
+A deferred constraint requires a replacement for reschedules at commit; its selections
+must match the predecessor. State, replacement and response history commit together.
+Down migration refuses to discard existing lifecycle history. See BOOKING_LIFECYCLE.md
+for service authorization, retry semantics, database tests and remaining boundaries.

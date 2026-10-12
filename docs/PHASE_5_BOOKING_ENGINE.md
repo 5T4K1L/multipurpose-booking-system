@@ -225,8 +225,20 @@ occupancy preserves valid adjacent/spanning bookings. Migration 000013 is applie
 Full database-enabled tests, build and vet passed. No frontend or manual configuration
 is required. Advisory slots remain non-reserving and do not subtract existing bookings.
 
+## Phase 5.6 - Booking cancellation and rescheduling
+
+Completed 2026-10-12. [BOOKING_LIFECYCLE.md](BOOKING_LIFECYCLE.md) records the exact
+POST APIs, owner/admin policy, pre-buffer cutoff, terminal history and durable retries.
+Cancellation releases capacity; rescheduling creates a linked replacement in the same
+transaction. Failed moves preserve the original. Migration 000014 adds audit metadata,
+response snapshots and database transition/replacement guards. Current eligibility and
+scheduling are rechecked for moves; historical creation/retry responses stay stable.
+
+Full PostgreSQL-enabled tests, build and vet passed. No manual setup or frontend
+changes are required. Customer-facing workflows and outstanding release checks remain
+outside this milestone.
+
 ## Next milestone
 
-Phase 5.6: booking lifecycle - define cancellation/rescheduling authorization,
-state transitions and capacity release, then implement protected operations.
+Phase 5.7: booking read APIs and occupancy-aware advisory availability.
 Dashboards remain Phase 6. Apple and previous release checks remain in DEFERRED_WORK.md.

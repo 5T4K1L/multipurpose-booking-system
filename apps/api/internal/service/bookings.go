@@ -22,6 +22,7 @@ var (
 )
 
 type BookingStore interface {
+	BookingLifecycleStore
 	GetBookingReplay(context.Context, db.GetBookingReplayParams) (db.Booking, error)
 	CreateBooking(context.Context, db.CreateBookingParams) (db.Booking, error)
 }
@@ -76,45 +77,19 @@ func (s *BookingService) Create(ctx context.Context, actor int64, business pgtyp
 			if existing.RequestHash != hash {
 				return ErrIdempotencyConflict
 			}
+			// Creation retries replay the original confirmation, not later lifecycle state.
+			existing.Status = "confirmed"
 			out = bookingResult(existing, true)
 			return nil
 		}
 		if !errors.Is(e, pgx.ErrNoRows) {
 			return e
 		}
-		loc, e := q.GetLocation(ctx, db.GetLocationParams{BusinessID: a.BusinessID(), ID: in.LocationID})
+		params, e := prepareBooking(ctx, q, a, key, hash, in)
 		if e != nil {
 			return e
 		}
-		zone, e := time.LoadLocation(loc.Timezone)
-		if e != nil {
-			return e
-		}
-		date := in.StartsAt.In(zone).Format("2006-01-02")
-		day, e := time.Parse("2006-01-02", date)
-		if e != nil {
-			return e
-		}
-		slots, e := calculateCatalogSlots(ctx, q, a, in.ServiceID, SlotRequest{date, in.LocationID, in.StaffID, in.ResourceID}, day)
-		if e != nil {
-			return e
-		}
-		var end time.Time
-		for _, slot := range slots.Slots {
-			if slot.StartsAt.Equal(in.StartsAt) {
-				end = slot.EndsAt
-				break
-			}
-		}
-		if end.IsZero() {
-			return ErrBookingConflict
-		}
-		rules, e := q.GetServiceSchedulingRules(ctx, db.GetServiceSchedulingRulesParams{BusinessID: a.BusinessID(), ServiceID: in.ServiceID})
-		if e != nil {
-			return e
-		}
-		stamp := func(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, Valid: true} }
-		b, e := q.CreateBooking(ctx, db.CreateBookingParams{BusinessID: a.BusinessID(), ServiceID: in.ServiceID, LocationID: in.LocationID, StaffID: in.StaffID, ResourceID: in.ResourceID, CreatedBy: a.ActorID(), IdempotencyKey: key, RequestHash: hash, StartsAt: stamp(in.StartsAt), EndsAt: stamp(end), BusyStartsAt: stamp(in.StartsAt.Add(-time.Duration(rules.BufferBeforeMinutes) * time.Minute)), BusyEndsAt: stamp(end.Add(time.Duration(rules.BufferAfterMinutes) * time.Minute))})
+		b, e := q.CreateBooking(ctx, params)
 		if e != nil {
 			return e
 		}
@@ -122,20 +97,72 @@ func (s *BookingService) Create(ctx context.Context, actor int64, business pgtyp
 		return nil
 	})
 	if err != nil {
-		// Never publish a booking on rollback or commit failure.
-		switch {
-		case errors.Is(err, ErrForbidden):
-			return BookingResult{}, ErrForbidden
-		case errors.Is(err, ErrIdempotencyConflict):
-			return BookingResult{}, ErrIdempotencyConflict
-		case errors.Is(err, ErrBookingConflict), errors.Is(err, pgx.ErrNoRows):
-			return BookingResult{}, ErrBookingConflict
-		}
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23P01" && (pgErr.ConstraintName == "bookings_staff_conflict" || pgErr.ConstraintName == "bookings_resource_capacity") {
-			return BookingResult{}, ErrBookingConflict
-		}
-		return BookingResult{}, ErrBookingUnavailable
+		return BookingResult{}, bookingError(err)
 	}
 	return out, nil
+}
+
+// Reused by creation and replacement within the caller's tenant transaction.
+func prepareBooking(ctx context.Context, q BusinessStore, a TenantAccess, key, hash string, in BookingInput) (db.CreateBookingParams, error) {
+	loc, e := q.GetLocation(ctx, db.GetLocationParams{BusinessID: a.BusinessID(), ID: in.LocationID})
+	if e != nil {
+		return db.CreateBookingParams{}, e
+	}
+	zone, e := time.LoadLocation(loc.Timezone)
+	if e != nil {
+		return db.CreateBookingParams{}, e
+	}
+	date := in.StartsAt.In(zone).Format("2006-01-02")
+	day, e := time.Parse("2006-01-02", date)
+	if e != nil {
+		return db.CreateBookingParams{}, e
+	}
+	slots, e := calculateCatalogSlots(ctx, q, a, in.ServiceID, SlotRequest{date, in.LocationID, in.StaffID, in.ResourceID}, day)
+	if e != nil {
+		return db.CreateBookingParams{}, e
+	}
+	var end time.Time
+	for _, slot := range slots.Slots {
+		if slot.StartsAt.Equal(in.StartsAt) {
+			end = slot.EndsAt
+			break
+		}
+	}
+	if end.IsZero() {
+		return db.CreateBookingParams{}, ErrBookingConflict
+	}
+	rules, e := q.GetServiceSchedulingRules(ctx, db.GetServiceSchedulingRulesParams{BusinessID: a.BusinessID(), ServiceID: in.ServiceID})
+	if e != nil {
+		return db.CreateBookingParams{}, e
+	}
+	stamp := func(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, Valid: true} }
+
+	return db.CreateBookingParams{BusinessID: a.BusinessID(), ServiceID: in.ServiceID, LocationID: in.LocationID, StaffID: in.StaffID, ResourceID: in.ResourceID, CreatedBy: a.ActorID(), IdempotencyKey: key, RequestHash: hash, StartsAt: stamp(in.StartsAt), EndsAt: stamp(end), BusyStartsAt: stamp(in.StartsAt.Add(-time.Duration(rules.BufferBeforeMinutes) * time.Minute)), BusyEndsAt: stamp(end.Add(time.Duration(rules.BufferAfterMinutes) * time.Minute))}, nil
+}
+
+func bookingError(err error) error {
+	switch {
+	case errors.Is(err, ErrForbidden):
+		return ErrForbidden
+	case errors.Is(err, ErrIdempotencyConflict):
+		return ErrIdempotencyConflict
+	case errors.Is(err, ErrBookingNotFound):
+		return ErrBookingNotFound
+	case errors.Is(err, ErrBookingState):
+		return ErrBookingState
+	case errors.Is(err, ErrInvalidBooking):
+		return ErrInvalidBooking
+	case errors.Is(err, ErrBookingConflict), errors.Is(err, pgx.ErrNoRows):
+		return ErrBookingConflict
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == "23P01" && (pgErr.ConstraintName == "bookings_staff_conflict" || pgErr.ConstraintName == "bookings_resource_capacity") {
+			return ErrBookingConflict
+		}
+		if pgErr.Code == "23514" && pgErr.ConstraintName == "bookings_lifecycle" {
+			return ErrBookingState
+		}
+	}
+	return ErrBookingUnavailable
 }

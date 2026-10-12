@@ -6,14 +6,14 @@ PHASE 5 - Core Booking Engine (in progress)
 
 ## Current Step
 
-5.5 - Transactional booking creation completed (2026-10-12).
-See [BOOKINGS.md](BOOKINGS.md) for the tenant-admin POST API, durable idempotency,
-current-configuration validation and database-enforced staff/resource occupancy.
-Migration 000013 is applied. Full database-enabled tests, build and vet passed.
+5.6 - Booking cancellation and rescheduling completed (2026-10-12).
+See [BOOKING_LIFECYCLE.md](BOOKING_LIFECYCLE.md) for owner/admin authorization,
+pre-buffer cutoff, retained history, durable retries and atomic capacity changes.
+Migration 000014 is applied. Full database-enabled tests, build and vet passed.
 Advisory slots still do not reserve or subtract bookings; creation is authoritative.
 
-Next: Phase 5.6 booking lifecycle rules and protected cancellation/rescheduling.
-Booking and scheduling frontend screens and customer self-service are not present.
+Next: Phase 5.7 booking read APIs and occupancy-aware advisory availability.
+Booking/scheduling frontend screens and customer self-service are not present.
 Phase 4 business/membership development scope remains complete.
 
 Google remains enabled; Apple setup/live verification is deferred by user instruction.

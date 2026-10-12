@@ -1,6 +1,7 @@
 # Booking creation - Phase 5.5
 
-Completed 2026-10-12. Phase 5 remains in progress.
+Completed 2026-10-12. Phase 5 remains in progress. This records the creation contract;
+[BOOKING_LIFECYCLE.md](BOOKING_LIFECYCLE.md) adds Phase 5.6 cancellation/rescheduling.
 
 ## API
 
@@ -47,14 +48,17 @@ Unknown JSON fields, null/nonobject bodies and trailing JSON are rejected.
 Responses are no-store. Credentialed CORS allows only the configured origin;
 OPTIONS is unauthenticated and allows Content-Type and Idempotency-Key. Mutations
 have a ten-second timeout and process-local limit of 60 attempts per transport peer
-per 15 minutes. There are no GET/list, edit, delete or cancellation routes yet.
+per 15 minutes. There are no GET/list, in-place edit or delete routes. Phase 5.6 adds lifecycle POST routes.
 
 ## Transaction and retry semantics
 
 The existing tenant transaction locks the business, then rechecks active membership.
 The durable key is scoped to business + authenticated actor. A SHA-256 digest of the
 normalized typed request detects mismatches; equivalent timezone offsets produce the
-same digest. Keys remain with booking history and have no expiry in this milestone.
+same digest. Keys remain with booking history and have no expiry.
+After a lifecycle change, creation retries still acknowledge the original confirmation;
+they are not current-state queries. Cancellation/rescheduling have separate durable
+response snapshots described in BOOKING_LIFECYCLE.md.
 
 After authorization, an existing matching result is replayed even if schedules,
 eligibility or the current time have changed. Revoked/disabled actors cannot replay.
@@ -84,9 +88,9 @@ intervals are allowed. Resource protection clips overlapping bookings to the new
 interval and sweeps grouped start/end events. Admission uses peak simultaneous
 occupancy, not the sum of all overlapping bookings. One booking consumes one unit.
 The resource must belong to the selected location. Resource capacity/location/tenant
-changes are rejected once it has bookings, pending lifecycle rules. Booking UPDATE
-is rejected at the database boundary; cancellation and rescheduling need a later
-migration and explicit policies. There is no application deletion operation.
+changes remain rejected once it has bookings. Phase 5.6 migration 14 replaces the
+blanket booking UPDATE rejection with guarded terminal transitions; original times
+and selections remain immutable. There is no application deletion operation.
 
 Direct SQL protections cover ownership, intervals and occupancy. Scheduling,
 eligibility and active-account policy belong to the service; administrative SQL
@@ -110,9 +114,9 @@ continue to exercise the shared slot calculation.
 Advisory slots still do not subtract existing bookings; creation is authoritative.
 Same-business operations serialize, and the trigger scans overlapping occupancy;
 large-scale performance/load testing remains future work. No customer identity,
-notifications, payments, cancellation, rescheduling, list UI or public booking flow
-is introduced. Google remains enabled; Apple and earlier browser/race/production
+notifications, payments, list UI or public booking flow is introduced here. Phase 5.6
+adds cancellation and rescheduling under BOOKING_LIFECYCLE.md. Google remains enabled; Apple and earlier browser/race/production
 checks remain in DEFERRED_WORK.md. No manual configuration is required.
 
-Next: Phase 5.6 booking lifecycle - define cancellation/rescheduling authorization,
-state transitions and capacity release before implementing those operations.
+Phase 5.6 lifecycle is now implemented. Next: Phase 5.7 booking read APIs and
+occupancy-aware advisory availability.
