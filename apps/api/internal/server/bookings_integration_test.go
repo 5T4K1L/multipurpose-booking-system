@@ -432,7 +432,7 @@ func TestBookingIntegration(t *testing.T) {
 	request(-1, "OPTIONS", "", "", origin, 204)
 	request(-1, "POST", string(inputJSON), "first", origin, 401)
 	request(0, "POST", string(inputJSON), "first", "", 403)
-	request(0, "GET", "", "", origin, 405)
+	request(0, "DELETE", "", "", origin, 405)
 	request(0, "POST", string(inputJSON), "", origin, 400)
 	request(0, "POST", string(inputJSON), "bad key", origin, 400)
 	request(0, "POST", string(inputJSON), "first", origin, 200)

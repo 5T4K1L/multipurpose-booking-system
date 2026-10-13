@@ -50,3 +50,13 @@ Official setup: https://developer.apple.com/help/account/capabilities/configure-
 Google/password development is verified. The user authorized moving into Phase 4
 with Apple deferred; this is a development progression decision, not unconditional
 Phase 3 or production security sign-off. Keep these items visible during later reviews.
+
+
+## Booking UI verification update (2026-10-13)
+
+Phase 5 /bookings passed an isolated headless Chrome flow covering local login,
+demo setup, creation, occupied slots, rescheduling, cancellation and history.
+Desktop 1280x900 and mobile 390x844 screenshots were inspected; no horizontal mobile
+overflow or browser page errors occurred. Interactive computer-use tools still failed
+to initialize. This booking-specific coverage does not waive broader authentication,
+cross-browser/accessibility, Apple, race-detector or production checks above.

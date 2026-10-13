@@ -23,6 +23,7 @@ var (
 
 type BookingStore interface {
 	BookingLifecycleStore
+	BookingReadStore
 	GetBookingReplay(context.Context, db.GetBookingReplayParams) (db.Booking, error)
 	CreateBooking(context.Context, db.CreateBookingParams) (db.Booking, error)
 }

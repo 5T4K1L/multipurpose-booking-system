@@ -469,3 +469,17 @@ Maintainable
 from the beginning.
 
 No major change yet. The actual "Continue with Google/Apple" UI belongs when the authentication flows are integrated into the frontend.
+
+
+## Phase 5 booking test workspace (2026-10-13)
+
+/bookings is a client-rendered, API-connected test workspace, linked from home and
+account. It uses existing session cookies and tenant APIs for demo provisioning,
+selection, occupied-slot lookup, creation, history/details and lifecycle actions.
+The server is authoritative for access and capacity. Pending mutation keys in
+sessionStorage preserve safe retry identity without storing credentials.
+
+No frontend library or design-system dependency was added. Desktop/mobile Chrome
+flow and screenshot checks passed. BOOKING_WORKSPACE.md records exact access and
+limitations; Phase 6 extends business/catalog management. Every full phase must
+include a usable UI and testing instructions before completion (user rule).

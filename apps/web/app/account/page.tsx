@@ -37,6 +37,7 @@ export default function AccountPage() {
         <h1 id="account-title" className="mt-6 text-3xl font-semibold">Your account</h1>
         <p role="status" className="mt-4">{status}</p>
         {account && <dl className="mt-6 space-y-2 break-words"><dt className="font-semibold">Name</dt><dd>{account.username}</dd><dt className="font-semibold">Email</dt><dd>{account.email}</dd></dl>}
+        {account && <p className="mt-6"><Link href="/bookings" className="font-semibold underline underline-offset-4">Open booking workspace</Link></p>}
         <Link href={account ? "/logout" : "/login"} className="mt-6 inline-block underline underline-offset-4">{account ? "Sign out" : "Sign in"}</Link>
       </section>
     </main>

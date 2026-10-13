@@ -13,6 +13,7 @@ import (
 func RegisterBookingRoutes(mux *http.ServeMux, h http.Handler) {
 	base := "/api/v1/businesses/{businessID}/bookings"
 	mux.Handle(base, h)
+	mux.Handle(base+"/{bookingID}", h)
 	mux.Handle(base+"/{bookingID}/{action}", h)
 }
 
@@ -31,6 +32,10 @@ func NewBookingHandler(sessions sessionValidator, bookings *service.BookingServi
 		business, ok := catalogUUID(r.PathValue("businessID"))
 		if !ok {
 			catalogFailure(w, 400, "INVALID_BUSINESS_ID")
+			return
+		}
+		if r.Method == "GET" {
+			serveBookingRead(w, r, bookings, actor.UserID, business)
 			return
 		}
 		if !limiter.allow(r.RemoteAddr) {
@@ -93,28 +98,41 @@ func NewBookingHandler(sessions sessionValidator, bookings *service.BookingServi
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Add("Vary", "Origin")
-		if r.Header.Get("Origin") != origin {
+		if r.Header.Get("Origin") != "" && r.Header.Get("Origin") != origin || r.Method != "GET" && r.Header.Get("Origin") != origin {
 			catalogFailure(w, 403, "ORIGIN_REJECTED")
 			return
 		}
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		if r.Header.Get("Origin") == origin {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Expose-Headers", "X-Next-Cursor")
+		}
 		if action := r.PathValue("action"); action != "" && action != "cancel" && action != "reschedule" {
 			catalogFailure(w, 404, "NOT_FOUND")
 			return
 		}
-		w.Header().Set("Allow", "POST, OPTIONS")
+		methods := "GET, POST, OPTIONS"
+		if r.PathValue("bookingID") != "" {
+			methods = "GET, OPTIONS"
+		}
+		if r.PathValue("action") != "" {
+			methods = "POST, OPTIONS"
+		}
+		allowed := func(method string) bool {
+			return method == "OPTIONS" || method == "GET" && r.PathValue("action") == "" || method == "POST" && (r.PathValue("bookingID") == "" || r.PathValue("action") != "")
+		}
+		w.Header().Set("Allow", methods)
 		if r.Method == "OPTIONS" {
-			if method := r.Header.Get("Access-Control-Request-Method"); method != "" && method != "POST" {
+			if method := r.Header.Get("Access-Control-Request-Method"); method != "" && !allowed(method) {
 				catalogFailure(w, 405, "METHOD_NOT_ALLOWED")
 				return
 			}
-			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", methods)
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key")
 			w.WriteHeader(204)
 			return
 		}
-		if r.Method != "POST" {
+		if !allowed(r.Method) {
 			catalogFailure(w, 405, "METHOD_NOT_ALLOWED")
 			return
 		}
@@ -136,4 +154,49 @@ func serveBookingChange(w http.ResponseWriter, r *http.Request, s *service.Booki
 		return nil, nil
 	}
 	return s.Reschedule(r.Context(), actor, business, id, r.Header.Get("Idempotency-Key"), in.StartsAt)
+}
+
+func serveBookingRead(w http.ResponseWriter, r *http.Request, s *service.BookingService, actor int64, business pgtype.UUID) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	var result any
+	var e error
+	cursor := ""
+	if raw := r.PathValue("bookingID"); raw != "" {
+		id, ok := catalogUUID(raw)
+		if !ok || r.URL.RawQuery != "" {
+			catalogFailure(w, 400, "VALIDATION_ERROR")
+			return
+		}
+		result, e = s.Get(ctx, actor, business, id)
+	} else {
+		for key := range r.URL.Query() {
+			if key != "limit" && key != "cursor" {
+				catalogFailure(w, 400, "INVALID_PAGINATION")
+				return
+			}
+		}
+		input, err := businessPageRequest(r)
+		if err != nil {
+			catalogFailure(w, 400, "INVALID_PAGINATION")
+			return
+		}
+		page, err := s.List(ctx, actor, business, input)
+		result, e, cursor = page.Items, err, page.NextCursor
+	}
+	switch {
+	case errors.Is(e, service.ErrForbidden):
+		catalogFailure(w, 403, "FORBIDDEN")
+	case errors.Is(e, service.ErrBookingNotFound):
+		catalogFailure(w, 404, "BOOKING_NOT_FOUND")
+	case errors.Is(e, service.ErrInvalidPage):
+		catalogFailure(w, 400, "INVALID_PAGINATION")
+	case e != nil:
+		catalogFailure(w, 503, "BOOKING_UNAVAILABLE")
+	default:
+		if cursor != "" {
+			w.Header().Set("X-Next-Cursor", cursor)
+		}
+		_ = json.NewEncoder(w).Encode(result)
+	}
 }

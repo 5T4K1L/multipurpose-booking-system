@@ -23,6 +23,7 @@ var (
 // All lookups require business_id as well as id; unscoped lookups are unavailable.
 type BookingCatalogStore interface {
 	AvailabilityStore
+	BookingOccupancyStore
 	SchedulingStore
 	CatalogListStore
 	CatalogEligibilityStore

@@ -24,6 +24,13 @@ The platform is intended to become a universal booking infrastructure and market
 - AI-generated code is untrusted until reviewed and tested.
 - PostgreSQL is the primary source of truth for application data.
 
+## Phase-end UI requirement (user instruction, 2026-10-13)
+
+At the end of every full phase, build at least a simple working UI so the user can
+test that phase's functionality. Include a usable test flow and access instructions;
+API-only completion is insufficient. For Phase 5, provide a booking test UI before
+closing the phase. This does not require completing all Phase 6 dashboard features.
+
 ## Technology Stack
 
 Frontend:
@@ -83,7 +90,7 @@ Interfaces must consider:
 
 Current authorized phase:
 
-PHASE 0 — Engineering Foundation
+PHASE 5 - Core Booking Engine (development complete; 2026-10-13)
 
 No functionality belonging to later phases may be implemented unless explicitly authorized.
 
@@ -118,7 +125,7 @@ At the completion of every authorized phase:
 
 ## Current Implementation Status
 
-Phase 0 — Engineering Foundation is substantially implemented.
+Phase 5 core-booking development is complete with the /bookings test UI. See CURRENT_STATE.md and BOOKING_WORKSPACE.md; Phase 6 is next.
 
 The current verified development stack is:
 

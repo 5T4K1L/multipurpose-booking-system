@@ -30,7 +30,11 @@ func (s *BookingCatalogService) CalculateSlots(ctx context.Context, actor int64,
 		return SlotResult{}, ErrInvalidCatalog
 	}
 	return catalogOperation(ctx, s, actor, business, false, func(q BookingCatalogStore, a TenantAccess) (SlotResult, error) {
-		return calculateCatalogSlots(ctx, q, a, id, in, day)
+		result, e := calculateCatalogSlots(ctx, q, a, id, in, day)
+		if e != nil {
+			return SlotResult{}, e
+		}
+		return filterBookingOccupancy(ctx, q, a.BusinessID(), id, in, result)
 	})
 }
 

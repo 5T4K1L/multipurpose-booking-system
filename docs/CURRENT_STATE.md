@@ -2,18 +2,20 @@
 
 ## Current Phase
 
-PHASE 5 - Core Booking Engine (in progress)
+PHASE 5 - Core Booking Engine (development scope complete; 2026-10-13)
 
 ## Current Step
 
-5.6 - Booking cancellation and rescheduling completed (2026-10-12).
-See [BOOKING_LIFECYCLE.md](BOOKING_LIFECYCLE.md) for owner/admin authorization,
-pre-buffer cutoff, retained history, durable retries and atomic capacity changes.
-Migration 000014 is applied. Full database-enabled tests, build and vet passed.
-Advisory slots still do not reserve or subtract bookings; creation is authoritative.
+5.7 - Booking read APIs, occupancy-aware slots and booking test UI completed.
+Open http://localhost:3000/bookings and follow [BOOKING_WORKSPACE.md](BOOKING_WORKSPACE.md).
+The UI supports saved demo setup, booking, current/history reads, rescheduling and
+cancellation. Phase 5 now includes its required test UI before development closure.
+Full database-enabled Go tests/build/vet, frontend lint/build and isolated headless
+Chrome booking flow passed, including desktop/mobile screenshot review.
+Schema remains migration 14. Advisory slots reflect occupancy but never reserve it.
 
-Next: Phase 5.7 booking read APIs and occupancy-aware advisory availability.
-Booking/scheduling frontend screens and customer self-service are not present.
+Next: Phase 6.1 business workspace and catalog-management UI. Customer self-service
+and production sign-off remain outside this completed development scope.
 Phase 4 business/membership development scope remains complete.
 
 Google remains enabled; Apple setup/live verification is deferred by user instruction.

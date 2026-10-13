@@ -48,7 +48,7 @@ Unknown JSON fields, null/nonobject bodies and trailing JSON are rejected.
 Responses are no-store. Credentialed CORS allows only the configured origin;
 OPTIONS is unauthenticated and allows Content-Type and Idempotency-Key. Mutations
 have a ten-second timeout and process-local limit of 60 attempts per transport peer
-per 15 minutes. There are no GET/list, in-place edit or delete routes. Phase 5.6 adds lifecycle POST routes.
+per 15 minutes. Phase 5.7 adds GET/list routes; Phase 5.6 adds lifecycle POST routes. In-place edits and deletes remain unsupported.
 
 ## Transaction and retry semantics
 
@@ -111,12 +111,12 @@ closed dates, off-grid/past starts, role/origin/JSON checks, disabled/revoked re
 real transaction rollback and failed-commit result suppression. Existing DST tests
 continue to exercise the shared slot calculation.
 
-Advisory slots still do not subtract existing bookings; creation is authoritative.
+Phase 5.7 advisory slots subtract confirmed occupancy; creation remains authoritative.
 Same-business operations serialize, and the trigger scans overlapping occupancy;
 large-scale performance/load testing remains future work. No customer identity,
 notifications, payments, list UI or public booking flow is introduced here. Phase 5.6
 adds cancellation and rescheduling under BOOKING_LIFECYCLE.md. Google remains enabled; Apple and earlier browser/race/production
 checks remain in DEFERRED_WORK.md. No manual configuration is required.
 
-Phase 5.6 lifecycle is now implemented. Next: Phase 5.7 booking read APIs and
-occupancy-aware advisory availability.
+Phase 5.6 lifecycle and Phase 5.7 reads/occupied slots are implemented. The /bookings
+test UI is documented in BOOKING_WORKSPACE.md. Next: Phase 6.1 business/catalog UI.

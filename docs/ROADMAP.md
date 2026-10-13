@@ -138,7 +138,7 @@ PHASE 1   System Architecture                 COMPLETE
 PHASE 2   Database Architecture               COMPLETE
 PHASE 3   Authentication + Authorization      IN PROGRESS
 PHASE 4   Multi-Tenancy                       COMPLETED (development scope)
-PHASE 5   Core Booking Engine                 IN PROGRESS
+PHASE 5   Core Booking Engine                 DEV COMPLETE
 PHASE 6   Business SaaS + Business Admin      NOT STARTED
 PHASE 7   Customer Platform + Customer UI     NOT STARTED
 PHASE 8   Customer CRM + Import/Export        NOT STARTED
@@ -1307,18 +1307,23 @@ final review
 
 Only then should the phase be marked complete.
 
+User instruction (2026-10-13): every full phase must also include at least a simple,
+working UI to test its functionality. Record the access path and testing steps.
+Phase 5 must include a booking test UI before completion, ahead of Phase 6 dashboards.
+
 ---
 
 # Current Development Position
 
-As of 2026-10-12, Phase 5.6 booking cancellation/rescheduling is complete. Phase 5
-remains in progress. BOOKING_LIFECYCLE.md records migration 000014, owner/admin APIs,
-pre-buffer cutoff, retained history, durable retries and atomic capacity changes.
-Advisory slots remain non-reserving and do not subtract existing bookings.
+As of 2026-10-13, Phase 5 core-booking development scope is complete. Phase 5.7 adds
+booking read APIs, occupancy-aware advisory slots and the required simple test UI at
+http://localhost:3000/bookings. BOOKING_WORKSPACE.md records access, test steps,
+contracts, limitations and verification. No new migration is needed (schema 14).
 
-Phase 4 business/membership development scope is complete. DEFERRED_WORK.md retains
-user-deferred Apple setup and outstanding browser/race/production checks without
-claiming unconditional Phase 3 closure.
+Full database-enabled Go tests/build/vet and frontend lint/build passed. An isolated
+headless Chrome flow verified login/demo setup/booking/rescheduling/cancellation and
+history; desktop/mobile screenshots were inspected. Earlier release checks remain in
+DEFERRED_WORK.md; this is not unconditional Phase 3 closure or production sign-off.
 
-Next: Phase 5.7 booking read APIs and occupancy-aware advisory availability.
-Dashboards remain Phase 6; customer self-service and booking frontend are not present.
+Next: Phase 6.1 business workspace and catalog-management UI. Full Phase 6 must also
+include a usable UI and testing instructions under the recorded phase-end rule.

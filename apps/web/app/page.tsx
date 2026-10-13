@@ -36,6 +36,7 @@ export default function Home() {
         <Link href="/register" className="mt-6 inline-block rounded-lg bg-blue-700 px-5 py-3 text-white">Create account</Link>
         <Link href="/login" className="ml-4 inline-block px-3 py-3 underline underline-offset-4">Sign in</Link>
         <p className="mt-4 text-sm"><Link href="/logout" className="underline underline-offset-4">Sign out</Link></p>
+        <p className="mt-4"><Link href="/bookings" className="inline-block rounded-lg bg-teal-800 px-5 py-3 font-semibold text-white">Open booking workspace</Link></p>
         <p className="mt-4 text-sm"><Link href="/account" className="underline underline-offset-4">Your account</Link></p>
       </div>
     </main>

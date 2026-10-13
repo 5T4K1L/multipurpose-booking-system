@@ -238,7 +238,20 @@ Full PostgreSQL-enabled tests, build and vet passed. No manual setup or frontend
 changes are required. Customer-facing workflows and outstanding release checks remain
 outside this milestone.
 
-## Next milestone
+## Phase 5.7 - Booking reads, occupied slots and test UI
 
-Phase 5.7: booking read APIs and occupancy-aware advisory availability.
-Dashboards remain Phase 6. Apple and previous release checks remain in DEFERRED_WORK.md.
+Completed 2026-10-13. [BOOKING_WORKSPACE.md](BOOKING_WORKSPACE.md) documents the
+protected paginated booking/current-history APIs, capacity-aware advisory filtering
+and simple /bookings UI. Demo setup, booking, details, linked history, rescheduling and
+cancellation are available for user testing. No additional migration is required.
+
+Full database-enabled Go tests/build/vet and frontend lint/build passed. Headless
+Chrome verified the complete local flow and capacity release; desktop/mobile captures
+were reviewed. Earlier release checks remain explicitly deferred.
+
+## Phase 5 development closure
+
+The bounded Phase 5 core-booking scope is complete, including its required test UI.
+This does not imply production readiness, public customer workflows or full business
+dashboards. Next: Phase 6.1 business workspace and catalog-management UI. Phase 6
+completion must also provide a usable UI and testing instructions.

@@ -52,7 +52,7 @@ Both return 200 for first success and retry. Response fields:
 
 Nested booking objects retain the Phase 5.5 schema (including replayed false).
 No internal audit actor, hash or key is returned. Preserve replacement IDs for later
-operations. GET/list APIs and booking screens are still pending.
+operations. Phase 5.7 provides GET/list APIs and a simple /bookings test screen.
 
 Additional errors are 404 BOOKING_NOT_FOUND (missing or another business's booking)
 and 409 BOOKING_STATE_CONFLICT (terminal booking or buffered start reached).
@@ -122,7 +122,7 @@ revoked retries and disabled sessions. Existing creation, OAuth and DST tests pa
 
 No manual configuration or frontend changes are needed. Google remains enabled.
 Apple live setup, browser QA, race detector and production checks remain in
-DEFERRED_WORK.md. Advisory slot results still do not subtract existing reservations.
+DEFERRED_WORK.md. Phase 5.7 advisory slots now filter confirmed occupancy.
 
-Next: Phase 5.7 booking read APIs and occupancy-aware advisory availability.
+Phase 5.7 read APIs and the booking test UI are complete; see BOOKING_WORKSPACE.md.
 Customer self-service, notifications, payments and frontend dashboards remain separate.

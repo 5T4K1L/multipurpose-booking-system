@@ -125,7 +125,7 @@ Apple, browser QA, race-detector and production checks remain in DEFERRED_WORK.m
 [BOOKINGS.md](BOOKINGS.md) documents transactional creation, durable idempotency and
 database-enforced buffered staff/resource occupancy. Creation reuses the same slot
 calculation inside its tenant transaction and rejects stale advisory results.
-Advisory slots still do not subtract existing bookings or reserve capacity.
+Phase 5.7 advisory slots now subtract confirmed staff/resource occupancy; they never reserve capacity.
 Phase 5.6 cancellation/rescheduling now releases or replaces occupancy atomically;
-see BOOKING_LIFECYCLE.md. Next is booking read APIs and occupancy-aware advisory
-availability. No booking frontend or public customer availability route is introduced.
+see BOOKING_LIFECYCLE.md. BOOKING_WORKSPACE.md records Phase 5.7 read APIs and the
+simple /bookings test UI. Public customer availability remains unimplemented.
