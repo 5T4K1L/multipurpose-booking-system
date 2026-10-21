@@ -32,6 +32,7 @@ func TestRegistrationHTTP(t *testing.T) {
 		status                                  int
 		calls                                   int
 	}{
+		{name: "duplicate email", method: "POST", body: registrationBody, contentType: "application/json", err: service.ErrEmailRegistered, status: 409, calls: 1},
 		{name: "accepted", method: "POST", body: registrationBody, contentType: "application/json", status: 202, calls: 1},
 		{name: "validation", method: "POST", body: registrationBody, contentType: "application/json", err: service.ErrInvalidRegistration, status: 400, calls: 1},
 		{name: "internal error", method: "POST", body: registrationBody, contentType: "application/json", err: errors.New("secret DB password"), status: 503, calls: 1},

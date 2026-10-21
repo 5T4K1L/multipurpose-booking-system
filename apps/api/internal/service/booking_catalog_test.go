@@ -33,6 +33,12 @@ func TestCatalogValidation(t *testing.T) {
 			t.Fatal(name, err)
 		}
 	}
+
+	for _, role := range []string{strings.Repeat("x", 61), "bad\nrole", string([]byte{0xff})} {
+		if _, err := s.CreateStaffProfile(ctx, 1, id, StaffProfileInput{Name: "Person", RoleName: role}); err != ErrInvalidCatalog {
+			t.Fatal("invalid role", err)
+		}
+	}
 	for _, zone := range []string{"", "Local", "not/a/zone", strings.Repeat("x", 101)} {
 		if _, err := s.CreateLocation(ctx, 1, id, LocationInput{Name: "Place", Timezone: zone}); err != ErrInvalidCatalog {
 			t.Fatal(zone, err)

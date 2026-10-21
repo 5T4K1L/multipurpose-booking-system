@@ -10,13 +10,20 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"multipurpose-booking-system/api/internal/db"
 )
 
+var ErrBusinessAlreadyOwned = errors.New("this account already owns a business")
+
 var ErrInvalidBusiness = errors.New("invalid business input")
 
 type BusinessStore interface {
+	GuestStore
+	CustomerCRMStore
+	CustomerFoundationStore
+	BusinessSettingsStore
 	BookingStore
 	BookingCatalogStore
 	GetUserByID(context.Context, int64) (db.User, error)
@@ -37,8 +44,9 @@ type BusinessService struct{ transactions BusinessTransactions }
 func NewBusinessService(t BusinessTransactions) *BusinessService { return &BusinessService{t} }
 
 type BusinessInput struct {
-	Name     string `json:"name"`
-	Timezone string `json:"timezone"`
+	Profile  *BusinessSettings `json:"profile,omitempty"`
+	Name     string            `json:"name"`
+	Timezone string            `json:"timezone"`
 }
 type BusinessView struct {
 	ID       pgtype.UUID `json:"id"`
@@ -78,10 +86,24 @@ func (s *BusinessService) Create(ctx context.Context, actor int64, in BusinessIn
 	if _, err := time.LoadLocation(in.Timezone); err != nil {
 		return BusinessView{}, ErrInvalidBusiness
 	}
+	if in.Profile != nil {
+		v, e := normalizeBusinessSettings(*in.Profile)
+		if e != nil {
+			return BusinessView{}, e
+		}
+		in.Profile = &v
+	}
 	var out BusinessView
 	err := s.transactions.WithinBusiness(ctx, func(q BusinessStore) error {
 		if err := activeBusinessUser(ctx, q, actor); err != nil {
 			return err
+		}
+		owned, err := q.OwnedBusinessExists(ctx, actor)
+		if err != nil {
+			return err
+		}
+		if owned {
+			return ErrBusinessAlreadyOwned
 		}
 		b, err := q.CreateBusiness(ctx, db.CreateBusinessParams{Name: in.Name, Timezone: in.Timezone})
 		if err != nil {
@@ -90,10 +112,20 @@ func (s *BusinessService) Create(ctx context.Context, actor int64, in BusinessIn
 		if err = q.PutBusinessMembership(ctx, db.PutBusinessMembershipParams{BusinessID: b.ID, UserID: actor, Role: string(RoleBusinessOwner)}); err != nil {
 			return err
 		}
+		if in.Profile != nil {
+			v := in.Profile
+			if _, err = q.PutBusinessSettings(ctx, db.PutBusinessSettingsParams{BusinessID: b.ID, Tagline: v.Tagline, Description: v.Description, ContactEmail: v.ContactEmail, ContactPhone: v.ContactPhone, Website: v.Website}); err != nil {
+				return err
+			}
+		}
 		out = BusinessView{b.ID, b.Name, b.Timezone, RoleBusinessOwner}
 		return nil
 	})
 	if err != nil {
+		var pgerr *pgconn.PgError
+		if errors.As(err, &pgerr) && pgerr.ConstraintName == "one_owned_business_per_user" {
+			return BusinessView{}, ErrBusinessAlreadyOwned
+		}
 		return BusinessView{}, err
 	}
 	return out, nil

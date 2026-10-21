@@ -10,11 +10,17 @@ import (
 )
 
 type BookingReadStore interface {
+	HideCancelledBusinessBooking(context.Context, db.HideCancelledBusinessBookingParams) error
+	BookingCalendarStore
 	GetBookingView(context.Context, db.GetBookingViewParams) (db.GetBookingViewRow, error)
 	ListTenantBookings(context.Context, db.ListTenantBookingsParams) ([]db.ListTenantBookingsRow, error)
 }
 type BookingView struct {
-	ID pgtype.UUID `json:"id"`
+	CustomerName  string      `json:"customer_name"`
+	CustomerPhone string      `json:"customer_phone"`
+	CustomerEmail string      `json:"customer_email"`
+	CustomerNotes string      `json:"customer_notes"`
+	ID            pgtype.UUID `json:"id"`
 	BookingInput
 	EndsAt        time.Time   `json:"ends_at"`
 	BusyStartsAt  time.Time   `json:"busy_starts_at"`
@@ -25,13 +31,16 @@ type BookingView struct {
 }
 
 func publicBookingView(b db.GetBookingViewRow) BookingView {
-	return BookingView{ID: b.ID, BookingInput: BookingInput{b.ServiceID, b.LocationID, b.StaffID, b.ResourceID, b.StartsAt.Time.UTC()}, EndsAt: b.EndsAt.Time.UTC(), BusyStartsAt: b.BusyStartsAt.Time.UTC(), BusyEndsAt: b.BusyEndsAt.Time.UTC(), Status: b.Status, SupersedesID: b.SupersedesBookingID, ReplacementID: b.ReplacementID}
+	return BookingView{CustomerName: b.CustomerName, CustomerPhone: b.CustomerPhone, CustomerEmail: b.CustomerEmail, CustomerNotes: b.CustomerNotes, ID: b.ID, BookingInput: BookingInput{b.ServiceID, b.LocationID, b.StaffID, b.ResourceID, b.StartsAt.Time.UTC()}, EndsAt: b.EndsAt.Time.UTC(), BusyStartsAt: b.BusyStartsAt.Time.UTC(), BusyEndsAt: b.BusyEndsAt.Time.UTC(), Status: b.Status, SupersedesID: b.SupersedesBookingID, ReplacementID: b.ReplacementID}
 }
 func bookingRead[T any](ctx context.Context, s *BookingService, actor int64, business pgtype.UUID, fn func(BusinessStore, TenantAccess) (T, error)) (T, error) {
 	var out T
 	err := s.tenants.WithinTenant(ctx, actor, business, []Role{RoleBusinessOwner, RoleBusinessAdmin, RoleManager, RoleStaff}, func(q BusinessStore, a TenantAccess) error { var e error; out, e = fn(q, a); return e })
 	if err != nil {
 		var zero T
+		if errors.Is(err, ErrInvalidPage) {
+			return zero, ErrInvalidPage
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			return zero, ErrBookingNotFound
 		}
@@ -64,4 +73,27 @@ func (s *BookingService) List(ctx context.Context, actor int64, business pgtype.
 		}
 		return finishCatalogPage(views, limit, c, func(v BookingView) pgtype.UUID { return v.ID }), nil
 	})
+}
+
+func (s *BookingService) HideCancelled(ctx context.Context, actor int64, business, id pgtype.UUID) error {
+	if !id.Valid {
+		return ErrInvalidBooking
+	}
+	err := s.tenants.WithinTenant(ctx, actor, business, []Role{RoleBusinessOwner, RoleBusinessAdmin}, func(q BusinessStore, a TenantAccess) error {
+		b, e := q.GetTenantBooking(ctx, db.GetTenantBookingParams{BusinessID: a.BusinessID(), ID: id})
+		if e != nil {
+			return e
+		}
+		if b.Status != "cancelled" {
+			return ErrBookingState
+		}
+		return q.HideCancelledBusinessBooking(ctx, db.HideCancelledBusinessBookingParams{BusinessID: a.BusinessID(), BookingID: id, DeletedBy: actor})
+	})
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrBookingNotFound
+	}
+	return bookingError(err)
 }

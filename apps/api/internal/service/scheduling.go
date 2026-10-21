@@ -168,3 +168,13 @@ func (s *BookingCatalogService) GetSchedulingRules(ctx context.Context, actor in
 		return SchedulingRules{Configured: true, SchedulingRulesInput: SchedulingRulesInput{row.BufferBeforeMinutes, row.BufferAfterMinutes, row.MinimumLeadMinutes}}, nil
 	})
 }
+
+// Preparation, cleanup and notice are optional. Missing customization uses zero
+// minutes; database errors must never be mistaken for an available schedule.
+func effectiveSchedulingRules(ctx context.Context, q SchedulingStore, in db.GetServiceSchedulingRulesParams) (db.ServiceSchedulingRule, error) {
+	row, err := q.GetServiceSchedulingRules(ctx, in)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.ServiceSchedulingRule{BusinessID: in.BusinessID, ServiceID: in.ServiceID}, nil
+	}
+	return row, err
+}

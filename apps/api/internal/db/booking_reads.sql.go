@@ -13,36 +13,38 @@ import (
 
 const filterUnoccupiedSlots = `-- name: FilterUnoccupiedSlots :many
 WITH candidates AS (
- SELECT value AS starts_at,($7::timestamptz[])[ordinality] AS ends_at,ordinality FROM unnest($8::timestamptz[]) WITH ORDINALITY AS slots(value,ordinality)
+ SELECT value AS starts_at,($9::timestamptz[])[ordinality] AS ends_at,ordinality FROM unnest($10::timestamptz[]) WITH ORDINALITY AS slots(value,ordinality)
 )
 SELECT c.ordinality::integer AS position FROM candidates c
 WHERE (NOT $1::boolean OR NOT EXISTS (
- SELECT 1 FROM bookings b WHERE b.business_id=$2 AND b.staff_id=$3::uuid AND b.status='confirmed'
+ SELECT 1 FROM bookings b WHERE b.business_id=$2 AND b.staff_id=$3::uuid AND b.status='confirmed' AND (NOT $4::boolean OR b.id<>$5::uuid)
  AND b.busy_starts_at<c.ends_at AND b.busy_ends_at>c.starts_at
-)) AND (NOT $4::boolean OR NOT EXISTS (
+)) AND (NOT $6::boolean OR NOT EXISTS (
  SELECT 1 FROM (
   SELECT sum(sum(delta)) OVER (ORDER BY instant) AS occupied FROM (
    SELECT greatest(b.busy_starts_at,c.starts_at) AS instant,1 AS delta FROM bookings b
-   WHERE b.business_id=$2 AND b.resource_id=$5::uuid AND b.status='confirmed'
+   WHERE b.business_id=$2 AND b.resource_id=$7::uuid AND b.status='confirmed' AND (NOT $4::boolean OR b.id<>$5::uuid)
     AND b.busy_starts_at<c.ends_at AND b.busy_ends_at>c.starts_at
    UNION ALL
    SELECT least(b.busy_ends_at,c.ends_at),-1 FROM bookings b
-   WHERE b.business_id=$2 AND b.resource_id=$5::uuid AND b.status='confirmed'
+   WHERE b.business_id=$2 AND b.resource_id=$7::uuid AND b.status='confirmed' AND (NOT $4::boolean OR b.id<>$5::uuid)
     AND b.busy_starts_at<c.ends_at AND b.busy_ends_at>c.starts_at
   ) events GROUP BY instant
- ) occupancy WHERE occupied >= $6::integer
+ ) occupancy WHERE occupied >= $8::integer
 )) ORDER BY c.ordinality
 `
 
 type FilterUnoccupiedSlotsParams struct {
-	WithStaff    bool
-	BusinessID   pgtype.UUID
-	StaffID      pgtype.UUID
-	WithResource bool
-	ResourceID   pgtype.UUID
-	Capacity     int32
-	Ends         []pgtype.Timestamptz
-	Starts       []pgtype.Timestamptz
+	WithStaff      bool
+	BusinessID     pgtype.UUID
+	StaffID        pgtype.UUID
+	ExcludeBooking bool
+	ExcludedID     pgtype.UUID
+	WithResource   bool
+	ResourceID     pgtype.UUID
+	Capacity       int32
+	Ends           []pgtype.Timestamptz
+	Starts         []pgtype.Timestamptz
 }
 
 func (q *Queries) FilterUnoccupiedSlots(ctx context.Context, arg FilterUnoccupiedSlotsParams) ([]int32, error) {
@@ -50,6 +52,8 @@ func (q *Queries) FilterUnoccupiedSlots(ctx context.Context, arg FilterUnoccupie
 		arg.WithStaff,
 		arg.BusinessID,
 		arg.StaffID,
+		arg.ExcludeBooking,
+		arg.ExcludedID,
 		arg.WithResource,
 		arg.ResourceID,
 		arg.Capacity,
@@ -75,7 +79,8 @@ func (q *Queries) FilterUnoccupiedSlots(ctx context.Context, arg FilterUnoccupie
 }
 
 const getBookingView = `-- name: GetBookingView :one
-SELECT b.id, b.business_id, b.service_id, b.location_id, b.staff_id, b.resource_id, b.created_by, b.idempotency_key, b.request_hash, b.starts_at, b.ends_at, b.busy_starts_at, b.busy_ends_at, b.status, b.created_at, b.closed_at, b.closed_by, b.supersedes_booking_id, child.id AS replacement_id FROM bookings b
+SELECT b.id, b.business_id, b.service_id, b.location_id, b.staff_id, b.resource_id, b.created_by, b.idempotency_key, b.request_hash, b.starts_at, b.ends_at, b.busy_starts_at, b.busy_ends_at, b.status, b.created_at, b.closed_at, b.closed_by, b.supersedes_booking_id, b.customer_id, child.id AS replacement_id,coalesce(c.name,'')::text AS customer_name,coalesce(c.phone,'')::text AS customer_phone,coalesce(c.email,'')::text AS customer_email,coalesce(c.notes,'')::text AS customer_notes FROM bookings b
+LEFT JOIN guest_booking_contacts c ON c.booking_id=b.id
 LEFT JOIN bookings child ON child.business_id=b.business_id AND child.supersedes_booking_id=b.id
 WHERE b.business_id=$1 AND b.id=$2
 `
@@ -104,7 +109,12 @@ type GetBookingViewRow struct {
 	ClosedAt            pgtype.Timestamptz
 	ClosedBy            pgtype.Int8
 	SupersedesBookingID pgtype.UUID
+	CustomerID          pgtype.Int8
 	ReplacementID       pgtype.UUID
+	CustomerName        string
+	CustomerPhone       string
+	CustomerEmail       string
+	CustomerNotes       string
 }
 
 func (q *Queries) GetBookingView(ctx context.Context, arg GetBookingViewParams) (GetBookingViewRow, error) {
@@ -129,15 +139,37 @@ func (q *Queries) GetBookingView(ctx context.Context, arg GetBookingViewParams) 
 		&i.ClosedAt,
 		&i.ClosedBy,
 		&i.SupersedesBookingID,
+		&i.CustomerID,
 		&i.ReplacementID,
+		&i.CustomerName,
+		&i.CustomerPhone,
+		&i.CustomerEmail,
+		&i.CustomerNotes,
 	)
 	return i, err
 }
 
+const hideCancelledBusinessBooking = `-- name: HideCancelledBusinessBooking :exec
+INSERT INTO business_booking_dismissals(business_id,booking_id,deleted_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING
+`
+
+type HideCancelledBusinessBookingParams struct {
+	BusinessID pgtype.UUID
+	BookingID  pgtype.UUID
+	DeletedBy  int64
+}
+
+func (q *Queries) HideCancelledBusinessBooking(ctx context.Context, arg HideCancelledBusinessBookingParams) error {
+	_, err := q.db.Exec(ctx, hideCancelledBusinessBooking, arg.BusinessID, arg.BookingID, arg.DeletedBy)
+	return err
+}
+
 const listTenantBookings = `-- name: ListTenantBookings :many
-SELECT b.id, b.business_id, b.service_id, b.location_id, b.staff_id, b.resource_id, b.created_by, b.idempotency_key, b.request_hash, b.starts_at, b.ends_at, b.busy_starts_at, b.busy_ends_at, b.status, b.created_at, b.closed_at, b.closed_by, b.supersedes_booking_id, child.id AS replacement_id FROM bookings b
+SELECT b.id, b.business_id, b.service_id, b.location_id, b.staff_id, b.resource_id, b.created_by, b.idempotency_key, b.request_hash, b.starts_at, b.ends_at, b.busy_starts_at, b.busy_ends_at, b.status, b.created_at, b.closed_at, b.closed_by, b.supersedes_booking_id, b.customer_id, child.id AS replacement_id,coalesce(c.name,'')::text AS customer_name,coalesce(c.phone,'')::text AS customer_phone,coalesce(c.email,'')::text AS customer_email,coalesce(c.notes,'')::text AS customer_notes FROM bookings b
+LEFT JOIN guest_booking_contacts c ON c.booking_id=b.id
 LEFT JOIN bookings child ON child.business_id=b.business_id AND child.supersedes_booking_id=b.id
 WHERE b.business_id=$1
+ AND NOT EXISTS(SELECT 1 FROM business_booking_dismissals d WHERE d.business_id=b.business_id AND d.booking_id=b.id)
  AND (NOT $2::boolean OR b.id > $3::uuid)
 ORDER BY b.id LIMIT $4::integer
 `
@@ -168,7 +200,12 @@ type ListTenantBookingsRow struct {
 	ClosedAt            pgtype.Timestamptz
 	ClosedBy            pgtype.Int8
 	SupersedesBookingID pgtype.UUID
+	CustomerID          pgtype.Int8
 	ReplacementID       pgtype.UUID
+	CustomerName        string
+	CustomerPhone       string
+	CustomerEmail       string
+	CustomerNotes       string
 }
 
 func (q *Queries) ListTenantBookings(ctx context.Context, arg ListTenantBookingsParams) ([]ListTenantBookingsRow, error) {
@@ -204,7 +241,12 @@ func (q *Queries) ListTenantBookings(ctx context.Context, arg ListTenantBookings
 			&i.ClosedAt,
 			&i.ClosedBy,
 			&i.SupersedesBookingID,
+			&i.CustomerID,
 			&i.ReplacementID,
+			&i.CustomerName,
+			&i.CustomerPhone,
+			&i.CustomerEmail,
+			&i.CustomerNotes,
 		); err != nil {
 			return nil, err
 		}

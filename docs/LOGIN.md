@@ -5,7 +5,7 @@
 `POST /api/v1/auth/login` accepts `application/json`:
 
 ```json
-{"email":"person@example.com","password":"your existing password"}
+{ "email": "person@example.com", "password": "your existing password" }
 ```
 
 The request must include `Origin` exactly matching `WEB_ORIGIN`, including scheme and
@@ -23,7 +23,7 @@ Successful password verification and an active local account create a fresh pers
 session through the existing authentication/session services. The server returns `200`:
 
 ```json
-{"message":"Signed in."}
+{ "message": "Signed in." }
 ```
 
 The raw token is delivered only in a cookie, never response JSON, logs, browser storage,
@@ -41,16 +41,16 @@ No logout/revocation endpoint or session-validation middleware is added in this 
 
 ## Failures and abuse controls
 
-| Status | Meaning |
-| --- | --- |
-| 400 | Invalid JSON or missing/oversized input |
-| 401 | Unknown user, wrong password, passwordless account, disabled/deleted account |
-| 403 | Origin rejected |
-| 405 | Unsupported method |
-| 413 | Body too large |
-| 415 | Unsupported content type |
-| 429 | Rate/concurrency limit reached |
-| 503 | Authentication/session infrastructure unavailable |
+| Status | Meaning                                                                      |
+| ------ | ---------------------------------------------------------------------------- |
+| 400    | Invalid JSON or missing/oversized input                                      |
+| 401    | Unknown user, wrong password, passwordless account, disabled/deleted account |
+| 403    | Origin rejected                                                              |
+| 405    | Unsupported method                                                           |
+| 413    | Body too large                                                               |
+| 415    | Unsupported content type                                                     |
+| 429    | Rate/concurrency limit reached                                               |
+| 503    | Authentication/session infrastructure unavailable                            |
 
 All authentication rejections use the same `INVALID_CREDENTIALS` code and message.
 Failed requests never set or clear session cookies, and no token is returned when

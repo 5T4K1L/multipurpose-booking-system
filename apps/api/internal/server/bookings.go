@@ -7,12 +7,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"multipurpose-booking-system/api/internal/service"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
 func RegisterBookingRoutes(mux *http.ServeMux, h http.Handler) {
 	base := "/api/v1/businesses/{businessID}/bookings"
 	mux.Handle(base, h)
+	mux.Handle(base+"/calendar", h)
 	mux.Handle(base+"/{bookingID}", h)
 	mux.Handle(base+"/{bookingID}/{action}", h)
 }
@@ -43,7 +46,7 @@ func NewBookingHandler(sessions sessionValidator, bookings *service.BookingServi
 			catalogFailure(w, 429, "RATE_LIMITED")
 			return
 		}
-		if r.URL.RawQuery != "" || len(r.Header.Values("Idempotency-Key")) != 1 {
+		if r.URL.RawQuery != "" || r.Method != "DELETE" && len(r.Header.Values("Idempotency-Key")) != 1 {
 			catalogFailure(w, 400, "VALIDATION_ERROR")
 			return
 		}
@@ -52,7 +55,15 @@ func NewBookingHandler(sessions sessionValidator, bookings *service.BookingServi
 		var result any
 		var e error
 		status := 200
-		if action := r.PathValue("action"); action != "" {
+		if r.Method == "DELETE" {
+			id, valid := catalogUUID(r.PathValue("bookingID"))
+			if !valid {
+				catalogFailure(w, 400, "INVALID_BOOKING_ID")
+				return
+			}
+			e = bookings.HideCancelled(ctx, actor.UserID, business, id)
+			status = 204
+		} else if action := r.PathValue("action"); action != "" {
 			id, valid := catalogUUID(r.PathValue("bookingID"))
 			if !valid {
 				catalogFailure(w, 400, "INVALID_BOOKING_ID")
@@ -91,6 +102,9 @@ func NewBookingHandler(sessions sessionValidator, bookings *service.BookingServi
 			catalogFailure(w, 503, "BOOKING_UNAVAILABLE")
 		default:
 			w.WriteHeader(status)
+			if status == 204 {
+				return
+			}
 			_ = json.NewEncoder(w).Encode(result)
 		}
 	}))
@@ -107,19 +121,25 @@ func NewBookingHandler(sessions sessionValidator, bookings *service.BookingServi
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Expose-Headers", "X-Next-Cursor")
 		}
-		if action := r.PathValue("action"); action != "" && action != "cancel" && action != "reschedule" {
+		if action := r.PathValue("action"); action != "" && action != "cancel" && action != "reschedule" && action != "complete" {
 			catalogFailure(w, 404, "NOT_FOUND")
 			return
 		}
 		methods := "GET, POST, OPTIONS"
-		if r.PathValue("bookingID") != "" {
+		if r.PathValue("bookingID") != "" || strings.HasSuffix(r.URL.Path, "/bookings/calendar") {
 			methods = "GET, OPTIONS"
+			if r.PathValue("bookingID") != "" {
+				methods = "GET, DELETE, OPTIONS"
+			}
 		}
 		if r.PathValue("action") != "" {
 			methods = "POST, OPTIONS"
 		}
 		allowed := func(method string) bool {
-			return method == "OPTIONS" || method == "GET" && r.PathValue("action") == "" || method == "POST" && (r.PathValue("bookingID") == "" || r.PathValue("action") != "")
+			if strings.HasSuffix(r.URL.Path, "/bookings/calendar") {
+				return method == "GET" || method == "OPTIONS"
+			}
+			return method == "DELETE" && r.PathValue("bookingID") != "" && r.PathValue("action") == "" || method == "OPTIONS" || method == "GET" && r.PathValue("action") == "" || method == "POST" && (r.PathValue("bookingID") == "" || r.PathValue("action") != "")
 		}
 		w.Header().Set("Allow", methods)
 		if r.Method == "OPTIONS" {
@@ -141,9 +161,12 @@ func NewBookingHandler(sessions sessionValidator, bookings *service.BookingServi
 }
 
 func serveBookingChange(w http.ResponseWriter, r *http.Request, s *service.BookingService, actor int64, business, id pgtype.UUID, action string) (any, error) {
-	if action == "cancel" {
+	if action == "cancel" || action == "complete" {
 		if _, ok := decodeCatalogJSON[struct{}](w, r); !ok {
 			return nil, nil
+		}
+		if action == "complete" {
+			return s.Complete(r.Context(), actor, business, id, r.Header.Get("Idempotency-Key"))
 		}
 		return s.Cancel(r.Context(), actor, business, id, r.Header.Get("Idempotency-Key"))
 	}
@@ -162,7 +185,25 @@ func serveBookingRead(w http.ResponseWriter, r *http.Request, s *service.Booking
 	var result any
 	var e error
 	cursor := ""
-	if raw := r.PathValue("bookingID"); raw != "" {
+	if strings.HasSuffix(r.URL.Path, "/bookings/calendar") {
+		values, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			catalogFailure(w, 400, "INVALID_PAGINATION")
+			return
+		}
+		for key, v := range values {
+			if len(v) != 1 || (key != "from" && key != "to" && key != "limit" && key != "cursor") {
+				catalogFailure(w, 400, "INVALID_PAGINATION")
+				return
+			}
+		}
+		input, err := businessPageRequest(r)
+		if err != nil {
+			catalogFailure(w, 400, "INVALID_PAGINATION")
+			return
+		}
+		result, e = s.Calendar(ctx, actor, business, values.Get("from"), values.Get("to"), input)
+	} else if raw := r.PathValue("bookingID"); raw != "" {
 		id, ok := catalogUUID(raw)
 		if !ok || r.URL.RawQuery != "" {
 			catalogFailure(w, 400, "VALIDATION_ERROR")

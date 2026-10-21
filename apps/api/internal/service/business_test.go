@@ -44,14 +44,14 @@ func TestBusinessCreationFailureAndValidation(t *testing.T) {
 	}{{"membership", failure, nil}, {"commit", nil, failure}} {
 		t.Run(tc.name, func(t *testing.T) {
 			tx := &businessTestTransactions{store: businessTestStore{memberError: tc.member}, commitError: tc.commit}
-			b, err := NewBusinessService(tx).Create(context.Background(), 1, BusinessInput{"Example", "UTC"})
+			b, err := NewBusinessService(tx).Create(context.Background(), 1, BusinessInput{Name: "Example", Timezone: "UTC"})
 			if !errors.Is(err, failure) || b.ID.Valid {
 				t.Fatal("failed transaction exposed business", b, err)
 			}
 		})
 	}
 	tx := &businessTestTransactions{}
-	for _, in := range []BusinessInput{{"", "UTC"}, {"Example", "Local"}, {"Example", "invalid/zone"}, {"bad\nname", "UTC"}} {
+	for _, in := range []BusinessInput{{Name: "", Timezone: "UTC"}, {Name: "Example", Timezone: "Local"}, {Name: "Example", Timezone: "invalid/zone"}, {Name: "bad\nname", Timezone: "UTC"}} {
 		if _, err := NewBusinessService(tx).Create(context.Background(), 1, in); err != ErrInvalidBusiness {
 			t.Fatal(in, err)
 		}
@@ -59,4 +59,8 @@ func TestBusinessCreationFailureAndValidation(t *testing.T) {
 	if tx.calls != 0 {
 		t.Fatal("invalid input reached storage")
 	}
+}
+
+func (s businessTestStore) OwnedBusinessExists(context.Context, int64) (bool, error) {
+	return false, nil
 }

@@ -139,8 +139,8 @@ PHASE 2   Database Architecture               COMPLETE
 PHASE 3   Authentication + Authorization      IN PROGRESS
 PHASE 4   Multi-Tenancy                       COMPLETED (development scope)
 PHASE 5   Core Booking Engine                 DEV COMPLETE
-PHASE 6   Business SaaS + Business Admin      NOT STARTED
-PHASE 7   Customer Platform + Customer UI     NOT STARTED
+PHASE 6   Business SaaS + Business Admin      DEVELOPMENT COMPLETE
+PHASE 7   Customer Platform + Customer UI     DEVELOPMENT COMPLETE
 PHASE 8   Customer CRM + Import/Export        NOT STARTED
 PHASE 9   Business ↔ Customer Messaging       NOT STARTED
 PHASE 10  Background Jobs + Notifications     NOT STARTED
@@ -1327,3 +1327,196 @@ DEFERRED_WORK.md; this is not unconditional Phase 3 closure or production sign-o
 
 Next: Phase 6.1 business workspace and catalog-management UI. Full Phase 6 must also
 include a usable UI and testing instructions under the recorded phase-end rule.
+
+## Phase 6 progress - 2026-10-13
+
+Phase 6.1 completed: /business provides business creation, paginated catalog lists,
+catalog creation and eligibility assignment management with current tenant permissions.
+See BUSINESS_WORKSPACE.md for testing, verification and limitations.
+Next: Phase 6.2 scheduling configuration UI (hours, closures, service rules and
+staff/resource availability). Phase 6 remains in progress; its full dashboard scope
+is not complete. This entry supersedes the earlier "Next: Phase 6.1" position above.
+
+## Phase 6.2 progress and product clarification - 2026-10-13
+
+Phase 6.2 completed: scheduling forms on /business for hours, closed dates, service
+buffers/notice and dated staff/resource windows. See BUSINESS_SCHEDULING_UI.md.
+Next is Phase 6.3 business profile and catalog editing; this supersedes earlier next-step
+entries. Booking management/completion, calendar/dashboard and remaining settings
+must still be delivered before claiming full Phase 6 completion.
+
+User clarification: customers create and manage their own bookings. Businesses manage
+only bookings received by their own business, through business-facing pages, and can
+mark delivered bookings completed. Both sides share current booking state, so changes
+must appear in the other view. Customer deletion means cancellation with retained
+history. Customer identity/ownership must be enforced in the API before Phase 7 ships.
+The current /bookings screen is an internal operations/test workspace, not customer
+self-service. Business configuration will determine the offerings and availability
+shown to customers. Booking references, identities and timestamps should be assigned
+by the system; automatic available staff/resource allocation is separate future work.
+Customer-facing screens, publishing/discovery and ownership are Phase 7. Notifications
+and live push updates are not implied by sharing the same persisted booking record.
+
+## Phase 6.3 progress - 2026-10-13
+
+Phase 6.3 completed: edit existing business name/timezone and catalog fields at
+/business, with tenant-protected PUT APIs and booked-resource capacity safeguards.
+See BUSINESS_EDITING.md. This supersedes earlier next-step entries.
+Next: Phase 6.4 business-scoped booking management and completion status. Calendar,
+dashboard, remaining settings/customization and full-phase review remain before
+Phase 6 closure. Customer ownership and self-service continue to be Phase 7 work.
+
+## Phase 6.4 progress - 2026-10-14
+
+Business booking management is available at /business/bookings with manual completion
+for delivered confirmed bookings after cleanup ends. Migration 15 preserves history
+and audit/idempotency semantics. See BUSINESS_BOOKING_MANAGEMENT.md.
+Next: Phase 6.5 calendar and dashboard; this supersedes earlier next-step entries.
+Remaining settings/customization and full-phase review remain before Phase 6 closure.
+Customer self-service remains Phase 7, with ownership enforced server-side before launch.
+
+## Phase 6.5 progress - 2026-10-14
+
+/business/calendar provides a business-local date agenda, chronological pagination
+and complete period counts by booking status. See BUSINESS_CALENDAR.md. No new
+migration; schema remains 15. Tests include tenant access, multi-page counts and DST.
+Next: Phase 6.6 business customization/settings, superseding earlier next-step entries.
+User instruction: prioritize functional UI/testing now; beginner-friendly redesign and
+polish will be addressed after the whole platform's functional implementation.
+This does not waive functional UI or responsive verification at each phase boundary.
+
+## Phase 6.6 progress - 2026-10-14
+
+Business customization now stores description/contact details with a saved preview.
+Owner-only team membership controls reuse existing APIs; /account shows the user's ID.
+See BUSINESS_SETTINGS.md. Migration 16 is clean; functional/API/browser checks passed.
+Next: Phase 6.7 full-phase completion review and gap closure, superseding earlier
+next-step entries. No public publishing/customer ownership implementation is claimed;
+Phase 7 remains separate. UI polish remains deferred until platform implementation.
+
+## Phase 6.7 closure - 2026-10-14
+
+Phase 6 development scope is complete. PHASE_6_CLOSURE.md maps every Phase 6 area
+to its functional UI, records fresh tests and preserves release limitations.
+Next: Phase 7.1 customer booking ownership and business publishing boundaries,
+superseding earlier next-step entries. Customer self-service must enforce persisted
+ownership before exposure; existing internal bookings are not implicitly customer-owned.
+No Phase 7 implementation or production approval is included in this closure.
+
+## Phase 7.1 foundation - 2026-10-14
+
+Customer ownership is persisted separately from created_by; old internal bookings
+remain unassigned. A protected customer item-read API and private business publication
+state are implemented, with database constraints and cross-customer/tenant tests.
+See CUSTOMER_FOUNDATION.md. Schema 17 is clean. This does not expose public contacts
+or implement customer booking creation/list/manage UI.
+Next: Phase 7.2 owner/admin publishing review UI and opt-in public business profiles.
+A public route was omitted after automatic approval review flagged contact exposure
+without a concrete review flow. Fresh explicit publishing confirmation is required
+before exposing data; do not infer it from foundation state alone.
+This supersedes previous next-step entries; Phase 7 remains in progress.
+
+## Phase 7.2 preparation - 2026-10-14
+
+Private publishing review and snapshot infrastructure passed backend/frontend/browser
+checks; migration 18 is clean. Public page/API and publish/unpublish UI are blocked
+pending explicit user approval following automatic approval review. Phase 7.2 remains
+incomplete; see PUBLICATION_REVIEW.md for the exact proposed payload and destination.
+No public business endpoint is exposed. This supersedes earlier next-step entries.
+
+## Phase 7.2 completed - 2026-10-16
+
+Reviewed opt-in public profiles are implemented after the user's instruction to proceed.
+Owner/admin confirmation publishes a snapshot; draft edits require republishing.
+Public page /businesses/{id} and anonymous API enforce active/confirmed/published state.
+Migration 19 keeps old prepared snapshots private until fresh confirmation.
+See PUBLICATION_REVIEW.md for tests and access. Earlier approval blocks are resolved.
+Next: Phase 7.3 public discovery and customer-facing service selection, superseding
+previous next-step entries. Full Phase 7 and customer booking actions remain pending.
+
+## Phase 7.3 completed - 2026-10-16
+
+Public business search/pagination and reviewed service selection are available at
+/businesses. Existing profiles need explicit republishing with services to appear in
+the directory. Reviewed service edits remain private; archived services are hidden.
+See PUBLIC_DISCOVERY.md for test evidence, limits and access. Schema remains 19.
+Next: Phase 7.4 customer-facing availability and location/eligibility resolution for
+selected published services. This supersedes earlier next-step entries. Selection is
+not booking creation; customer ownership/lifecycle implementation continues separately.
+
+## Phase 7.4 update (2026-10-16)
+
+Public service/location/date availability and responsive customer UI are complete.
+Publication previews now include linked location IDs, names and timezones; existing
+snapshots require owner/admin review and republishing. Current scheduling and
+occupancy filter advisory times. Selection creates no reservation or booking.
+See [PUBLIC_AVAILABILITY.md](PUBLIC_AVAILABILITY.md) for limits and passed checks.
+Next is Phase 7.5 authenticated customer-owned booking creation.
+
+## Phase 7.5 completed (2026-10-16)
+
+Customers can now confirm a booking from a published business after signing in.
+Ownership, assignment and current availability are enforced atomically; idempotent
+retries recover the saved booking without duplication. The responsive confirmation
+UI includes a booking reference. Schema stays 19. See
+[CUSTOMER_BOOKING_CREATION.md](CUSTOMER_BOOKING_CREATION.md) for the contract and tests.
+Next: Phase 7.6 customer booking history and detail UI; full Phase 7 remains open.
+
+## Phase 7.6 completed (2026-10-16)
+
+Customer history and detail UI are available at `/my-bookings` and
+`/my-bookings/{id}`. Account and booking confirmation links connect the flow.
+Pagination and all reads enforce authenticated customer ownership independently
+of business publication. See [CUSTOMER_BOOKING_HISTORY.md](CUSTOMER_BOOKING_HISTORY.md).
+Next: Phase 7.7 customer cancellation; rescheduling follows. Full Phase 7 remains open.
+
+## Business setup fix (2026-10-17)
+
+Per the user's request, both Publish actions now save pending workspace forms,
+fetch a fresh preview and publish using its token. This supersedes the earlier
+requirement to manually save every section and refresh the preview first.
+Failed saves stop publication; earlier saves may have completed. Missing locations
+produce owner guidance before publishing. Custom staff role labels are private
+business vocabulary and do not grant account access. Migration 20 is clean.
+See [BUSINESS_SETUP_CLARITY.md](BUSINESS_SETUP_CLARITY.md) for scope, checks and limitations.
+Phase 7.7 customer cancellation remains next; no cancellation work was delivered here.
+
+# Phase 7.7 completed — 2026-10-18
+
+Customers can cancel their own future bookings from booking details, with explicit
+confirmation, retained history, atomic capacity release and safe retries. Existing
+operator lifecycle rules and ownership boundaries are enforced. See
+[CUSTOMER_BOOKING_CANCELLATION.md](CUSTOMER_BOOKING_CANCELLATION.md).
+Next: Phase 7.8 customer rescheduling. The earlier range-booking/setup simplification
+work is unfinished and recorded in DEFERRED_WORK.md. Full Phase 7 remains open.
+
+
+## Phase 7.8 completed (2026-10-18)
+
+Customer-owned future bookings can be rescheduled through their detail page.
+A protected availability read and atomic replacement preserve duration, branch,
+service, assignments and history. Occupancy and the preparation deadline are
+rechecked on confirmation. Retrying a committed move is safe after a lost response.
+See CUSTOMER_BOOKING_RESCHEDULING.md for the API, tests, limitations and file list.
+Next: Phase 7 completion review and gap closure, including previously deferred
+custom range workflow verification. Full Phase 7 and final UI redesign remain open.
+
+
+## Phase 7.9 completion review (2026-10-18)
+
+Phase 7 customer-booking development scope is complete. The custom-range workflow
+passed owner setup, save-before-publish, overnight creation and overlap rejection.
+Fresh backend/frontend checks and cancellation/rescheduling browser regressions
+passed. PHASE_7_CLOSURE.md maps scope and records limits; account profile is read-only.
+No payment, messaging, final redesign or production approval is implied.
+Next: Phase 8.1 tenant-scoped CRM foundation and basic customer table/UI.
+
+
+## Phase 8.1 completed - 2026-10-19
+
+Tenant-scoped read-only customer table, literal name/email search and pagination
+are implemented at /business/customers. Customer relationships derive from owned
+bookings; no account-wide directory is exposed. Only business owners/admins can
+read contact details and business-local counts. See CUSTOMER_CRM.md.
+Next: Phase 8.2 filtering and sorting. Manual CRM editing, bulk actions and the
+import/export lifecycle remain later work. No migration; schema remains 21.

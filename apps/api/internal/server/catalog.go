@@ -17,6 +17,8 @@ import (
 
 // Explicit public fields; database rows are never directly serialized.
 type catalogItem struct {
+	AllDay          bool         `json:"all_day,omitempty"`
+	RoleName        string       `json:"role_name,omitempty"`
 	ID              pgtype.UUID  `json:"id"`
 	Name            string       `json:"name"`
 	Timezone        string       `json:"timezone,omitempty"`
@@ -29,9 +31,11 @@ func publicLocation(v db.Location) catalogItem {
 	return catalogItem{ID: v.ID, Name: v.Name, Timezone: v.Timezone}
 }
 func publicService(v db.Service) catalogItem {
-	return catalogItem{ID: v.ID, Name: v.Name, DurationMinutes: v.DurationMinutes}
+	return catalogItem{ID: v.ID, Name: v.Name, DurationMinutes: v.DurationMinutes, AllDay: v.AllDay}
 }
-func publicStaff(v db.StaffProfile) catalogItem { return catalogItem{ID: v.ID, Name: v.Name} }
+func publicStaff(v db.StaffProfile) catalogItem {
+	return catalogItem{ID: v.ID, Name: v.Name, RoleName: v.RoleName}
+}
 func publicResource(v db.Resource) catalogItem {
 	return catalogItem{ID: v.ID, Name: v.Name, LocationID: &v.LocationID, Capacity: v.Capacity}
 }
@@ -57,6 +61,9 @@ func writeCatalogResult(w http.ResponseWriter, result any, status int, cursor st
 	switch {
 	case errors.Is(err, service.ErrForbidden):
 		catalogFailure(w, 403, "FORBIDDEN")
+		return
+	case errors.Is(err, service.ErrCatalogConflict):
+		catalogFailure(w, 409, "CATALOG_CONFLICT")
 		return
 	case errors.Is(err, service.ErrCatalogNotFound):
 		catalogFailure(w, 404, "CATALOG_NOT_FOUND")
@@ -226,9 +233,10 @@ func NewCatalogHandler(sessions sessionValidator, catalog *service.BookingCatalo
 		}
 		methods := "GET, POST, OPTIONS"
 		if r.PathValue("id") != "" {
-			methods = "GET, OPTIONS"
+			methods = "GET, PUT, DELETE, OPTIONS"
 		}
 		if rel := r.PathValue("relation"); rel != "" {
+			methods = "GET, OPTIONS"
 			if catalogAvailabilityRoute(kind, rel) {
 				if r.PathValue("targetID") != "" {
 					catalogFailure(w, 404, "NOT_FOUND")
@@ -244,6 +252,9 @@ func NewCatalogHandler(sessions sessionValidator, catalog *service.BookingCatalo
 					return
 				}
 				methods = "GET, PUT, OPTIONS"
+				if rel == "booking-readiness" {
+					methods = "GET, OPTIONS"
+				}
 			} else if _, ok := catalogRelation(kind, rel); !ok {
 				catalogFailure(w, 404, "NOT_FOUND")
 				return
@@ -281,6 +292,14 @@ func NewCatalogHandler(sessions sessionValidator, catalog *service.BookingCatalo
 }
 func serveCatalogEntity(w http.ResponseWriter, r *http.Request, s *service.BookingCatalogService, actor int64, business, id pgtype.UUID, kind string) {
 	ctx := r.Context()
+	if r.Method == "DELETE" {
+		writeCatalogResult(w, nil, 204, "", s.Archive(ctx, actor, business, id, kind))
+		return
+	}
+	if r.Method == "PUT" {
+		serveCatalogUpdate(w, r, s, actor, business, id, kind)
+		return
+	}
 	if r.Method == "POST" {
 		switch kind {
 		case "locations":
@@ -297,20 +316,22 @@ func serveCatalogEntity(w http.ResponseWriter, r *http.Request, s *service.Booki
 			in, ok := decodeCatalogJSON[struct {
 				Name            string `json:"name"`
 				DurationMinutes int32  `json:"duration_minutes"`
+				AllDay          bool   `json:"all_day"`
 			}](w, r)
 			if !ok {
 				return
 			}
-			v, err := s.CreateService(ctx, actor, business, service.ServiceInput{Name: in.Name, DurationMinutes: in.DurationMinutes})
+			v, err := s.CreateService(ctx, actor, business, service.ServiceInput{Name: in.Name, DurationMinutes: in.DurationMinutes, AllDay: in.AllDay})
 			writeCatalogResult(w, publicService(v), 201, "", err)
 		case "staff":
 			in, ok := decodeCatalogJSON[struct {
-				Name string `json:"name"`
+				Name     string `json:"name"`
+				RoleName string `json:"role_name"`
 			}](w, r)
 			if !ok {
 				return
 			}
-			v, err := s.CreateStaffProfile(ctx, actor, business, service.StaffProfileInput{Name: in.Name})
+			v, err := s.CreateStaffProfile(ctx, actor, business, service.StaffProfileInput{Name: in.Name, RoleName: in.RoleName})
 			writeCatalogResult(w, publicStaff(v), 201, "", err)
 		case "resources":
 			in, ok := decodeCatalogJSON[struct {

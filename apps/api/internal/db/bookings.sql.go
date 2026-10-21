@@ -13,7 +13,7 @@ import (
 
 const createBooking = `-- name: CreateBooking :one
 INSERT INTO bookings (business_id,service_id,location_id,staff_id,resource_id,created_by,idempotency_key,request_hash,starts_at,ends_at,busy_starts_at,busy_ends_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id, customer_id
 `
 
 type CreateBookingParams struct {
@@ -66,12 +66,13 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 		&i.ClosedAt,
 		&i.ClosedBy,
 		&i.SupersedesBookingID,
+		&i.CustomerID,
 	)
 	return i, err
 }
 
 const getBookingReplay = `-- name: GetBookingReplay :one
-SELECT id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id FROM bookings WHERE business_id=$1 AND created_by=$2 AND idempotency_key=$3
+SELECT id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id, customer_id FROM bookings WHERE business_id=$1 AND created_by=$2 AND idempotency_key=$3
 `
 
 type GetBookingReplayParams struct {
@@ -102,6 +103,7 @@ func (q *Queries) GetBookingReplay(ctx context.Context, arg GetBookingReplayPara
 		&i.ClosedAt,
 		&i.ClosedBy,
 		&i.SupersedesBookingID,
+		&i.CustomerID,
 	)
 	return i, err
 }

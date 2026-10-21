@@ -12,12 +12,12 @@ Migration 000009 adds four tenant-owned tables with UUID IDs, business ownership
 created_at/updated_at timestamps, active/archived status, and unique (business_id,id)
 keys for present and future composite relationships:
 
-| Table | Meaning | Additional fields |
-|---|---|---|
-| locations | Where work or reservations take place | name, explicit IANA timezone |
-| services | What the business offers | name, duration_minutes |
-| staff_profiles | Bookable people within a business | name |
-| resources | Rooms, equipment or other capacity | name, location_id, capacity |
+| Table          | Meaning                               | Additional fields            |
+| -------------- | ------------------------------------- | ---------------------------- |
+| locations      | Where work or reservations take place | name, explicit IANA timezone |
+| services       | What the business offers              | name, duration_minutes       |
+| staff_profiles | Bookable people within a business     | name                         |
+| resources      | Rooms, equipment or other capacity    | name, location_id, capacity  |
 
 Names are trimmed and must contain 1-100 characters without control characters.
 Location timezone must load as a named timezone; UTC is accepted, machine-local
@@ -92,14 +92,14 @@ All endpoints require the existing session cookie and current active membership.
 Only OWNER and BUSINESS_ADMIN may mutate; MANAGER and STAFF may read. Global
 platform roles have no tenant bypass, and request headers cannot assign an actor/role.
 
-| Method | Suffix | Request / result |
-|---|---|---|
-| POST | /locations | `{ "name": "Main", "timezone": "Asia/Shanghai" }` |
-| POST | /services | `{ "name": "Consultation", "duration_minutes": 30 }` |
-| POST | /staff | `{ "name": "Alex" }` |
-| POST | /resources | `{ "name": "Room", "location_id": "UUID", "capacity": 2 }` |
-| GET | /{kind} | Paginated array of active catalog records |
-| GET | /{kind}/{id} | One active record in the authorized business |
+| Method | Suffix       | Request / result                                           |
+| ------ | ------------ | ---------------------------------------------------------- |
+| POST   | /locations   | `{ "name": "Main", "timezone": "Asia/Shanghai" }`          |
+| POST   | /services    | `{ "name": "Consultation", "duration_minutes": 30 }`       |
+| POST   | /staff       | `{ "name": "Alex" }`                                       |
+| POST   | /resources   | `{ "name": "Room", "location_id": "UUID", "capacity": 2 }` |
+| GET    | /{kind}      | Paginated array of active catalog records                  |
+| GET    | /{kind}/{id} | One active record in the authorized business               |
 
 `kind` is locations, services, staff or resources. POST returns 201; GET returns 200.
 Public fields are id/name, plus timezone for locations, duration_minutes for services,
@@ -111,12 +111,12 @@ Item update, delete and archive routes are not implemented and return 405.
 
 The following collection suffixes are supported:
 
-| Collection suffix | Meaning |
-|---|---|
-| /services/{serviceID}/locations | Locations eligible to offer a service |
-| /services/{serviceID}/staff | Staff eligible to deliver a service |
-| /services/{serviceID}/resources | Resources eligible for a service |
-| /staff/{staffID}/locations | Locations where a staff profile is eligible to work |
+| Collection suffix               | Meaning                                             |
+| ------------------------------- | --------------------------------------------------- |
+| /services/{serviceID}/locations | Locations eligible to offer a service               |
+| /services/{serviceID}/staff     | Staff eligible to deliver a service                 |
+| /services/{serviceID}/resources | Resources eligible for a service                    |
+| /staff/{staffID}/locations      | Locations where a staff profile is eligible to work |
 
 GET on a collection returns a paginated array of target UUIDs. PUT on
 `{collection}/{targetID}` adds a link; DELETE removes it. Both return 204 and are

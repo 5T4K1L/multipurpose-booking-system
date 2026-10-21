@@ -309,7 +309,7 @@ func (h *OAuthRoutes) Callback(w http.ResponseWriter, r *http.Request, p auth.OA
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookieName(h.secure), Value: issued.Token, Path: "/", HttpOnly: true, Secure: h.secure, SameSite: http.SameSiteLaxMode, Expires: issued.ExpiresAt.UTC(), MaxAge: age})
 	h.logger.Info("oauth_callback", "provider", p, "outcome", "accepted")
-	http.Redirect(w, r, h.origin+"/account", http.StatusSeeOther)
+	http.Redirect(w, r, h.origin+"/business", http.StatusSeeOther)
 }
 func (h *OAuthRoutes) verify(ctx context.Context, cfg auth.OAuthProviderConfig, code string, tx auth.OAuthTransaction) (auth.OAuthIdentity, error) {
 	token, err := auth.ExchangeOAuthCode(ctx, cfg, code, tx.PKCEVerifier)

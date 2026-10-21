@@ -8,18 +8,18 @@ No Phase 4 implementation is authorized by this review.
 
 ## Closure checklist
 
-| Requirement | Result |
-| --- | --- |
-| Implementation complete | Not met: Google/Apple route wiring, UI, and live-provider integration remain |
-| Unit/integration/security tests | Full PostgreSQL-enabled go test ./... -count=1 passed |
-| Backend static/build checks | gofmt on changed code, git diff --check, go vet ./..., go build ./... passed |
-| Frontend static/build checks | ESLint and production build including TypeScript passed |
-| Current password flow | Live registration/login/account/logout and fixture cleanup passed |
-| OAuth foundation security | Existing component suite and Phase 3.14 tests pass; not live-provider validation |
-| Browser interaction | Unverified: automation kernel initialization failed again |
-| Race detector | Unverified: CGO/compiler prerequisite unavailable; normal concurrency tests passed |
-| Docs/current state/roadmap | Updated; known gaps retained explicitly |
-| Final completion | Not met; repeat this review after integration and verification |
+| Requirement                     | Result                                                                             |
+| ------------------------------- | ---------------------------------------------------------------------------------- |
+| Implementation complete         | Not met: Google/Apple route wiring, UI, and live-provider integration remain       |
+| Unit/integration/security tests | Full PostgreSQL-enabled go test ./... -count=1 passed                              |
+| Backend static/build checks     | gofmt on changed code, git diff --check, go vet ./..., go build ./... passed       |
+| Frontend static/build checks    | ESLint and production build including TypeScript passed                            |
+| Current password flow           | Live registration/login/account/logout and fixture cleanup passed                  |
+| OAuth foundation security       | Existing component suite and Phase 3.14 tests pass; not live-provider validation   |
+| Browser interaction             | Unverified: automation kernel initialization failed again                          |
+| Race detector                   | Unverified: CGO/compiler prerequisite unavailable; normal concurrency tests passed |
+| Docs/current state/roadmap      | Updated; known gaps retained explicitly                                            |
+| Final completion                | Not met; repeat this review after integration and verification                     |
 
 Frontend build initially failed fetching Google Fonts in the sandbox. Retrying with
 network access succeeded. This is an existing build-time network requirement.

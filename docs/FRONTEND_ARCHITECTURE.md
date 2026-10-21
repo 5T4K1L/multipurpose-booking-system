@@ -470,7 +470,6 @@ from the beginning.
 
 No major change yet. The actual "Continue with Google/Apple" UI belongs when the authentication flows are integrated into the frontend.
 
-
 ## Phase 5 booking test workspace (2026-10-13)
 
 /bookings is a client-rendered, API-connected test workspace, linked from home and

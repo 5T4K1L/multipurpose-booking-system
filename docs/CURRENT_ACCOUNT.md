@@ -3,7 +3,7 @@
 GET `/api/v1/auth/me` returns the currently authenticated local application user:
 
 ```json
-{"user":{"id":42,"email":"member@example.com","username":"Member"}}
+{ "user": { "id": 42, "email": "member@example.com", "username": "Member" } }
 ```
 
 The three fields are an explicit allowlist. Status, timestamps, password hashes,

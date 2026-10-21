@@ -190,7 +190,7 @@ func TestAvailabilityHTTPIntegration(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	countSlots(selected, 0) // Missing windows are closed, never unrestricted.
+	countSlots(selected, 29) // Assigned staff/resources follow business opening hours.
 	staffWindows := []service.AvailabilityWindow{{StartsAt: day.Add(10 * time.Hour), EndsAt: day.Add(12 * time.Hour)}}
 	resourceWindows := []service.AvailabilityWindow{{StartsAt: day.Add(10*time.Hour + 30*time.Minute), EndsAt: day.Add(12 * time.Hour)}}
 	body := func(windows []service.AvailabilityWindow) string {
@@ -205,7 +205,7 @@ func TestAvailabilityHTTPIntegration(t *testing.T) {
 	}
 	request(0, "PUT", staffPath, body(staffWindows), origin, 200)
 	request(0, "PUT", resourcePath, body(resourceWindows), origin, 200)
-	countSlots(selected, 3)
+	countSlots(selected, 29) // Narrow individual windows do not restrict the business.
 	if e := tenants.ChangeMember(ctx, users[0], a, users[2], service.RoleStaff, false); e != nil {
 		t.Fatal(e)
 	}
@@ -235,7 +235,7 @@ func TestAvailabilityHTTPIntegration(t *testing.T) {
 	if e := catalog.ChangeEligibility(ctx, users[0], a, staff.ID, loc.ID, service.StaffLocation, true); e != nil {
 		t.Fatal(e)
 	}
-	countSlots(selected, 0)
+	countSlots(selected, 29) // No explicit staff branches means follow the service branches.
 	if _, e := catalog.PutLocationSchedule(ctx, users[0], a, loc.ID, service.LocationScheduleInput{WeeklyHours: []service.WeeklyHours{{Weekday: int32(day.Weekday()), StartMinute: 0, EndMinute: 1440}}, ClosedDates: []string{day.Format("2006-01-02")}}); e != nil {
 		t.Fatal(e)
 	}

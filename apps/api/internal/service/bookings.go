@@ -104,7 +104,7 @@ func (s *BookingService) Create(ctx context.Context, actor int64, business pgtyp
 }
 
 // Reused by creation and replacement within the caller's tenant transaction.
-func prepareBooking(ctx context.Context, q BusinessStore, a TenantAccess, key, hash string, in BookingInput) (db.CreateBookingParams, error) {
+func prepareBooking(ctx context.Context, q BusinessStore, a TenantAccess, key, hash string, in BookingInput, duration ...int32) (db.CreateBookingParams, error) {
 	loc, e := q.GetLocation(ctx, db.GetLocationParams{BusinessID: a.BusinessID(), ID: in.LocationID})
 	if e != nil {
 		return db.CreateBookingParams{}, e
@@ -118,7 +118,7 @@ func prepareBooking(ctx context.Context, q BusinessStore, a TenantAccess, key, h
 	if e != nil {
 		return db.CreateBookingParams{}, e
 	}
-	slots, e := calculateCatalogSlots(ctx, q, a, in.ServiceID, SlotRequest{date, in.LocationID, in.StaffID, in.ResourceID}, day)
+	slots, e := calculateCatalogSlots(ctx, q, a.BusinessID(), in.ServiceID, SlotRequest{date, in.LocationID, in.StaffID, in.ResourceID}, day, duration...)
 	if e != nil {
 		return db.CreateBookingParams{}, e
 	}
@@ -132,7 +132,7 @@ func prepareBooking(ctx context.Context, q BusinessStore, a TenantAccess, key, h
 	if end.IsZero() {
 		return db.CreateBookingParams{}, ErrBookingConflict
 	}
-	rules, e := q.GetServiceSchedulingRules(ctx, db.GetServiceSchedulingRulesParams{BusinessID: a.BusinessID(), ServiceID: in.ServiceID})
+	rules, e := effectiveSchedulingRules(ctx, q, db.GetServiceSchedulingRulesParams{BusinessID: a.BusinessID(), ServiceID: in.ServiceID})
 	if e != nil {
 		return db.CreateBookingParams{}, e
 	}

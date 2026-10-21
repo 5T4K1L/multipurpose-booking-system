@@ -7,9 +7,40 @@ import (
 )
 
 func catalogSchedulingRoute(kind, relation string) bool {
-	return kind == "locations" && relation == "schedule" || kind == "services" && relation == "scheduling-rules"
+	return kind == "locations" && relation == "schedule" || kind == "services" && (relation == "scheduling-rules" || relation == "booking-options" || relation == "booking-readiness")
 }
 func serveScheduling(w http.ResponseWriter, r *http.Request, s *service.BookingCatalogService, actor int64, business, id pgtype.UUID) {
+	if r.PathValue("relation") == "booking-readiness" {
+		if r.Method != "GET" {
+			catalogFailure(w, 405, "METHOD_NOT_ALLOWED")
+			return
+		}
+		v, e := s.BookingReadiness(r.Context(), actor, business, id)
+		writeCatalogResult(w, v, 200, "", e)
+		return
+	}
+	if r.PathValue("relation") == "booking-options" {
+		if r.Method == "GET" {
+			v, e := s.GetBookingOptions(r.Context(), actor, business, id)
+			writeCatalogResult(w, v, 200, "", e)
+			return
+		}
+		in, ok := decodeCatalogJSON[struct {
+			Enabled *bool  `json:"enabled"`
+			Minimum *int32 `json:"minimum_minutes"`
+			Maximum *int32 `json:"maximum_minutes"`
+		}](w, r)
+		if !ok {
+			return
+		}
+		if in.Enabled == nil || in.Minimum == nil || in.Maximum == nil {
+			catalogFailure(w, 400, "VALIDATION_ERROR")
+			return
+		}
+		v, e := s.PutBookingOptions(r.Context(), actor, business, id, service.BookingOptions{Enabled: *in.Enabled, MinimumMinutes: *in.Minimum, MaximumMinutes: *in.Maximum})
+		writeCatalogResult(w, v, 200, "", e)
+		return
+	}
 	if r.PathValue("kind") == "locations" {
 		if r.Method == "GET" {
 			v, err := s.GetLocationSchedule(r.Context(), actor, business, id)

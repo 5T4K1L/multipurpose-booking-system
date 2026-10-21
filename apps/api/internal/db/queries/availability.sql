@@ -16,6 +16,6 @@ SELECT
  EXISTS(SELECT 1 FROM service_locations sl WHERE sl.business_id=sqlc.arg(business_id) AND sl.service_id=sqlc.arg(service_id) AND sl.location_id=sqlc.arg(location_id)) AS service_location,
  (NOT sqlc.arg(with_staff)::boolean OR (
  EXISTS(SELECT 1 FROM service_staff ss WHERE ss.business_id=sqlc.arg(business_id) AND ss.service_id=sqlc.arg(service_id) AND ss.staff_id=sqlc.arg(staff_id)) AND
- EXISTS(SELECT 1 FROM staff_locations stl WHERE stl.business_id=sqlc.arg(business_id) AND stl.staff_id=sqlc.arg(staff_id) AND stl.location_id=sqlc.arg(location_id)))) AS staff_eligible,
+ (NOT EXISTS(SELECT 1 FROM staff_locations assigned WHERE assigned.business_id=sqlc.arg(business_id) AND assigned.staff_id=sqlc.arg(staff_id)) OR EXISTS(SELECT 1 FROM staff_locations stl WHERE stl.business_id=sqlc.arg(business_id) AND stl.staff_id=sqlc.arg(staff_id) AND stl.location_id=sqlc.arg(location_id))))) AS staff_eligible,
  (NOT sqlc.arg(with_resource)::boolean OR
  EXISTS(SELECT 1 FROM service_resources sr WHERE sr.business_id=sqlc.arg(business_id) AND sr.service_id=sqlc.arg(service_id) AND sr.resource_id=sqlc.arg(resource_id))) AS resource_eligible;

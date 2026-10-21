@@ -97,6 +97,101 @@ func NewBusinessHandler(sessions sessionValidator, businesses *service.BusinessS
 				return
 			}
 			switch {
+			case len(parts) == 2 && parts[1] == "customers":
+				if r.Method != "GET" {
+					w.Header().Set("Allow", "GET, OPTIONS")
+					fail(w, 405, "METHOD_NOT_ALLOWED")
+					return
+				}
+				values, err := url.ParseQuery(r.URL.RawQuery)
+				if err != nil {
+					fail(w, 400, "VALIDATION_ERROR")
+					return
+				}
+				for key, v := range values {
+					if (key != "limit" && key != "cursor" && key != "q") || len(v) != 1 {
+						fail(w, 400, "VALIDATION_ERROR")
+						return
+					}
+				}
+				// Existing pagination parser accepts only pagination keys.
+				copyRequest := r.Clone(ctx)
+				copyURL := *r.URL
+				copyRequest.URL = &copyURL
+				search := values.Get("q")
+				values.Del("q")
+				copyRequest.URL.RawQuery = values.Encode()
+				input, err := businessPageRequest(copyRequest)
+				if err != nil {
+					fail(w, 400, "INVALID_PAGINATION")
+					return
+				}
+				page, pageErr := businesses.Customers(ctx, actor.UserID, id, input, search)
+				result, e = page.Items, pageErr
+				if e == nil && page.NextCursor != "" {
+					w.Header().Set("X-Next-Cursor", page.NextCursor)
+				}
+			case len(parts) == 2 && parts[1] == "publication":
+				if r.URL.RawQuery != "" {
+					fail(w, 400, "VALIDATION_ERROR")
+					return
+				}
+				switch r.Method {
+				case "GET":
+					result, e = businesses.Publication(ctx, actor.UserID, id, nil, "")
+				case "PUT":
+					in, ok := decodeCatalogJSON[struct {
+						Published   *bool  `json:"published"`
+						ReviewToken string `json:"review_token"`
+					}](w, r)
+					if !ok {
+						return
+					}
+					if in.Published == nil {
+						fail(w, 400, "VALIDATION_ERROR")
+						return
+					}
+					result, e = businesses.Publication(ctx, actor.UserID, id, in.Published, in.ReviewToken)
+				default:
+					w.Header().Set("Allow", "GET, PUT, OPTIONS")
+					fail(w, 405, "METHOD_NOT_ALLOWED")
+					return
+				}
+			case len(parts) == 2 && parts[1] == "settings":
+				if r.URL.RawQuery != "" {
+					fail(w, 400, "VALIDATION_ERROR")
+					return
+				}
+				switch r.Method {
+				case "GET":
+					result, e = businesses.Settings(ctx, actor.UserID, id)
+				case "PUT":
+					in, ok := decodeCatalogJSON[struct {
+						Tagline      *string `json:"tagline"`
+						Description  *string `json:"description"`
+						ContactEmail *string `json:"contact_email"`
+						ContactPhone *string `json:"contact_phone"`
+						Website      *string `json:"website"`
+					}](w, r)
+					if !ok {
+						return
+					}
+					if in.Tagline == nil || in.Description == nil || in.ContactEmail == nil || in.ContactPhone == nil || in.Website == nil {
+						fail(w, 400, "VALIDATION_ERROR")
+						return
+					}
+					result, e = businesses.SaveSettings(ctx, actor.UserID, id, service.BusinessSettings{Tagline: *in.Tagline, Description: *in.Description, ContactEmail: *in.ContactEmail, ContactPhone: *in.ContactPhone, Website: *in.Website})
+				default:
+					w.Header().Set("Allow", "GET, PUT, OPTIONS")
+					fail(w, 405, "METHOD_NOT_ALLOWED")
+					return
+				}
+			case len(parts) == 1 && r.Method == "PUT":
+				in, ok := decodeCatalogJSON[service.BusinessInput](w, r)
+				if !ok {
+					return
+				}
+				result, e = businesses.UpdateProfile(ctx, actor.UserID, id, in)
 			case len(parts) == 1 && r.Method == "GET":
 				result, e = businesses.Get(ctx, actor.UserID, id)
 			case len(parts) == 2 && parts[1] == "memberships" && r.Method == "GET":
@@ -135,6 +230,18 @@ func NewBusinessHandler(sessions sessionValidator, businesses *service.BusinessS
 		}
 		if errors.Is(e, service.ErrInvalidPage) {
 			fail(w, 400, "INVALID_PAGINATION")
+			return
+		}
+		if errors.Is(e, service.ErrPublicationTooLarge) {
+			fail(w, 400, "PUBLICATION_TOO_LARGE")
+			return
+		}
+		if errors.Is(e, service.ErrPublicationChanged) {
+			fail(w, 409, "PUBLICATION_CHANGED")
+			return
+		}
+		if errors.Is(e, service.ErrBusinessAlreadyOwned) {
+			fail(w, 409, "BUSINESS_ALREADY_OWNED")
 			return
 		}
 		if errors.Is(e, service.ErrInvalidBusiness) {

@@ -71,7 +71,7 @@ func TestRegistrationTransactionPolicy(t *testing.T) {
 		createErr, credentialErr, commitErr, want error
 	}{
 		{name: "create"},
-		{name: "duplicate", createErr: ErrConflict},
+		{name: "duplicate", createErr: ErrConflict, want: ErrEmailRegistered},
 		{name: "insert error", createErr: errors.New("secret detail"), want: ErrRegistrationUnavailable},
 		{name: "credential error", credentialErr: errors.New("secret hash"), want: ErrRegistrationUnavailable},
 		{name: "credential conflict is not email duplicate", credentialErr: ErrConflict, want: ErrRegistrationUnavailable},

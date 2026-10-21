@@ -61,7 +61,7 @@ func parsePage(in PageRequest, kind string, actor int64, business pgtype.UUID) (
 	if d.Decode(&extra) != io.EOF || c.Version != 1 || c.Kind != kind || c.Actor != actor || c.Business != business {
 		return 0, c, ErrInvalidPage
 	}
-	if kind == "businesses" {
+	if kind == "businesses" || kind == "customer-bookings" {
 		if !c.ID.Valid || c.Created.IsZero() || c.Created.Year() < 1 || c.Created.Year() > 9999 || c.UserID != 0 {
 			return 0, c, ErrInvalidPage
 		}

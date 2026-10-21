@@ -22,6 +22,8 @@ var (
 // BookingCatalogStore is implemented by sqlc on the existing tenant transaction.
 // All lookups require business_id as well as id; unscoped lookups are unavailable.
 type BookingCatalogStore interface {
+	BookingOptionsStore
+	CatalogUpdateStore
 	AvailabilityStore
 	BookingOccupancyStore
 	SchedulingStore
@@ -47,10 +49,14 @@ type LocationInput struct {
 	Timezone string
 }
 type ServiceInput struct {
+	AllDay          bool
 	Name            string
 	DurationMinutes int32
 }
-type StaffProfileInput struct{ Name string }
+type StaffProfileInput struct {
+	Name     string
+	RoleName string
+}
 type ResourceInput struct {
 	Name       string
 	LocationID pgtype.UUID
@@ -73,6 +79,12 @@ func catalogOperation[T any](ctx context.Context, s *BookingCatalogService, acto
 	err := s.tenants.WithinTenant(ctx, actor, business, roles, func(q BusinessStore, a TenantAccess) error { var e error; out, e = fn(q, a); return e })
 	if err != nil {
 		var zero T
+		if errors.Is(err, ErrInvalidCatalog) {
+			return zero, ErrInvalidCatalog
+		}
+		if errors.Is(err, ErrCatalogConflict) {
+			return zero, ErrCatalogConflict
+		}
 		if errors.Is(err, ErrForbidden) {
 			return zero, ErrForbidden
 		}
@@ -96,21 +108,25 @@ func (s *BookingCatalogService) CreateLocation(ctx context.Context, actor int64,
 	})
 }
 func (s *BookingCatalogService) CreateService(ctx context.Context, actor int64, business pgtype.UUID, in ServiceInput) (db.Service, error) {
+	if in.AllDay {
+		in.DurationMinutes = 1440
+	}
 	name, ok := catalogName(in.Name)
 	if !ok || in.DurationMinutes < 1 || in.DurationMinutes > 10080 {
 		return db.Service{}, ErrInvalidCatalog
 	}
 	return catalogOperation(ctx, s, actor, business, true, func(q BookingCatalogStore, a TenantAccess) (db.Service, error) {
-		return q.CreateService(ctx, db.CreateServiceParams{BusinessID: a.BusinessID(), Name: name, DurationMinutes: in.DurationMinutes})
+		return q.CreateService(ctx, db.CreateServiceParams{BusinessID: a.BusinessID(), Name: name, DurationMinutes: in.DurationMinutes, AllDay: in.AllDay})
 	})
 }
 func (s *BookingCatalogService) CreateStaffProfile(ctx context.Context, actor int64, business pgtype.UUID, in StaffProfileInput) (db.StaffProfile, error) {
 	name, ok := catalogName(in.Name)
-	if !ok {
+	role, valid := staffRoleLabel(in.RoleName)
+	if !ok || !valid {
 		return db.StaffProfile{}, ErrInvalidCatalog
 	}
 	return catalogOperation(ctx, s, actor, business, true, func(q BookingCatalogStore, a TenantAccess) (db.StaffProfile, error) {
-		return q.CreateStaffProfile(ctx, db.CreateStaffProfileParams{BusinessID: a.BusinessID(), Name: name})
+		return q.CreateStaffProfile(ctx, db.CreateStaffProfileParams{BusinessID: a.BusinessID(), Name: name, RoleName: role})
 	})
 }
 func (s *BookingCatalogService) CreateResource(ctx context.Context, actor int64, business pgtype.UUID, in ResourceInput) (db.Resource, error) {
@@ -156,4 +172,14 @@ func (s *BookingCatalogService) GetResource(ctx context.Context, actor int64, bu
 	return catalogOperation(ctx, s, actor, business, false, func(q BookingCatalogStore, a TenantAccess) (db.Resource, error) {
 		return q.GetResource(ctx, db.GetResourceParams{BusinessID: a.BusinessID(), ID: id})
 	})
+}
+
+// Custom staff roles are business vocabulary, never authorization roles.
+func staffRoleLabel(value string) (string, bool) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", true
+	}
+	name, ok := catalogName(value)
+	return name, ok && utf8.RuneCountInString(name) <= 60
 }

@@ -113,11 +113,15 @@ func (h *RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		fail(http.StatusBadRequest, "VALIDATION_ERROR", service.ErrInvalidRegistration.Error())
 		return
 	}
+	if errors.Is(err, service.ErrEmailRegistered) {
+		fail(http.StatusConflict, "EMAIL_ALREADY_REGISTERED", "This email is already registered. Sign in to continue.")
+		return
+	}
 	if err != nil {
 		fail(http.StatusServiceUnavailable, "REGISTRATION_UNAVAILABLE", "Registration is temporarily unavailable.")
 		return
 	}
-	// Creation and duplicates have identical public responses and log outcomes.
+	// Only newly created accounts reach this response.
 	h.logger.Info("registration", "request_id", requestID, "outcome", "accepted")
 	w.WriteHeader(http.StatusAccepted)
 	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Registration request received."})

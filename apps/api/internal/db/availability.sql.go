@@ -16,7 +16,7 @@ SELECT
  EXISTS(SELECT 1 FROM service_locations sl WHERE sl.business_id=$1 AND sl.service_id=$2 AND sl.location_id=$3) AS service_location,
  (NOT $4::boolean OR (
  EXISTS(SELECT 1 FROM service_staff ss WHERE ss.business_id=$1 AND ss.service_id=$2 AND ss.staff_id=$5) AND
- EXISTS(SELECT 1 FROM staff_locations stl WHERE stl.business_id=$1 AND stl.staff_id=$5 AND stl.location_id=$3))) AS staff_eligible,
+ (NOT EXISTS(SELECT 1 FROM staff_locations assigned WHERE assigned.business_id=$1 AND assigned.staff_id=$5) OR EXISTS(SELECT 1 FROM staff_locations stl WHERE stl.business_id=$1 AND stl.staff_id=$5 AND stl.location_id=$3)))) AS staff_eligible,
  (NOT $6::boolean OR
  EXISTS(SELECT 1 FROM service_resources sr WHERE sr.business_id=$1 AND sr.service_id=$2 AND sr.resource_id=$7)) AS resource_eligible
 `

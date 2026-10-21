@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	ErrEmailRegistered         = errors.New("this email is already registered")
 	ErrInvalidRegistration     = errors.New("provide a valid email, a name of 1–80 characters, and a password of 15–128 characters")
 	ErrRegistrationUnavailable = errors.New("registration is temporarily unavailable")
 )
@@ -47,7 +48,7 @@ func validRegistration(input RegistrationInput) bool {
 	if strings.IndexFunc(input.Username, unicode.IsControl) >= 0 {
 		return false
 	}
-	if len(input.Email) > 254 {
+	if len(input.Email) > 254 || strings.HasSuffix(strings.ToLower(input.Email), "@guest.invalid") {
 		return false
 	}
 	// Use a plain ASCII mailbox, preserving the existing exact-email identity policy.
@@ -65,7 +66,7 @@ func validRegistration(input RegistrationInput) bool {
 }
 
 // Register creates a local user and credential together, without a session or
-// verification claim. Duplicate emails intentionally return the same result as creation.
+// verification claim. Duplicate email errors never modify the existing account.
 func (s *RegistrationService) Register(ctx context.Context, input RegistrationInput) error {
 	input.Email = strings.TrimSpace(input.Email)
 	input.Username = strings.TrimSpace(input.Username)
@@ -95,7 +96,7 @@ func (s *RegistrationService) Register(ctx context.Context, input RegistrationIn
 		return err
 	})
 	if duplicate && errors.Is(err, ErrConflict) {
-		return nil
+		return ErrEmailRegistered
 	}
 	if err != nil {
 		return ErrRegistrationUnavailable

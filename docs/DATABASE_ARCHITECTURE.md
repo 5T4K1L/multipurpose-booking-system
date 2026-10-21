@@ -1224,7 +1224,6 @@ and runs them under the business lock. Slot computation reads these windows alon
 scoped eligibility and schedules. These tables contain no reservations; booking
 conflict/capacity enforcement is implemented separately in Phase 5.5. See AVAILABILITY.md.
 
-
 ## Booking creation (Phase 5.5)
 
 Migration 000013 adds confirmed bookings, audit actor, immutable time/buffer snapshots,
@@ -1238,7 +1237,6 @@ Booking updates and capacity/location/tenant changes to booked resources are rej
 pending lifecycle rules. No lifecycle endpoints or customer identity model are added.
 Service transactions revalidate schedules/eligibility and publish results only after
 commit. See BOOKINGS.md for the exact API, transaction semantics, tests and limits.
-
 
 ## Booking lifecycle (Phase 5.6)
 

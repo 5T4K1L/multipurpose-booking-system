@@ -13,5 +13,5 @@ INSERT INTO booking_changes (business_id,actor_id,idempotency_key,booking_id,act
 VALUES ($1,$2,$3,$4,$5,$6,$7);
 
 -- name: CreateReplacementBooking :one
-INSERT INTO bookings (business_id,service_id,location_id,staff_id,resource_id,created_by,idempotency_key,request_hash,starts_at,ends_at,busy_starts_at,busy_ends_at,supersedes_booking_id)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *;
+INSERT INTO bookings (business_id,service_id,location_id,staff_id,resource_id,created_by,idempotency_key,request_hash,starts_at,ends_at,busy_starts_at,busy_ends_at,supersedes_booking_id,customer_id)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *;

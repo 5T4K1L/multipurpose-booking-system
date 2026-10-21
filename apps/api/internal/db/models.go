@@ -27,6 +27,7 @@ type Booking struct {
 	ClosedAt            pgtype.Timestamptz
 	ClosedBy            pgtype.Int8
 	SupersedesBookingID pgtype.UUID
+	CustomerID          pgtype.Int8
 }
 
 type BookingChange struct {
@@ -41,11 +42,27 @@ type BookingChange struct {
 }
 
 type Business struct {
-	ID        pgtype.UUID
-	Name      string
-	Timezone  string
-	Status    string
-	CreatedAt pgtype.Timestamptz
+	ID          pgtype.UUID
+	Name        string
+	Timezone    string
+	Status      string
+	CreatedAt   pgtype.Timestamptz
+	IsPublished bool
+}
+
+type BusinessBookingDismissal struct {
+	BusinessID pgtype.UUID
+	BookingID  pgtype.UUID
+	DeletedBy  int64
+	DeletedAt  pgtype.Timestamptz
+}
+
+type BusinessImage struct {
+	BusinessID           pgtype.UUID
+	Content              []byte
+	ContentType          string
+	PublishedContent     []byte
+	PublishedContentType string
 }
 
 type BusinessMembership struct {
@@ -53,6 +70,38 @@ type BusinessMembership struct {
 	UserID     int64
 	Role       string
 	CreatedAt  pgtype.Timestamptz
+}
+
+type BusinessPublicProfile struct {
+	BusinessID      pgtype.UUID
+	Profile         []byte
+	PublishedAt     pgtype.Timestamptz
+	PublicConfirmed bool
+}
+
+type BusinessSetting struct {
+	BusinessID   pgtype.UUID
+	Tagline      string
+	Description  string
+	ContactEmail string
+	ContactPhone string
+	Website      string
+	UpdatedAt    pgtype.Timestamptz
+}
+
+type GuestBookingContact struct {
+	BookingID pgtype.UUID
+	Name      string
+	Phone     string
+	Email     string
+	Notes     string
+	Hidden    bool
+}
+
+type GuestVisitor struct {
+	UserID    int64
+	TokenHash string
+	CreatedAt pgtype.Timestamptz
 }
 
 type Location struct {
@@ -105,6 +154,15 @@ type Service struct {
 	Status          string
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+	AllDay          bool
+}
+
+type ServiceBookingOption struct {
+	BusinessID     pgtype.UUID
+	ServiceID      pgtype.UUID
+	Enabled        bool
+	MinimumMinutes int32
+	MaximumMinutes int32
 }
 
 type ServiceLocation struct {
@@ -158,6 +216,7 @@ type StaffProfile struct {
 	Status     string
 	CreatedAt  pgtype.Timestamptz
 	UpdatedAt  pgtype.Timestamptz
+	RoleName   string
 }
 
 type User struct {

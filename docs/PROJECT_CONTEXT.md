@@ -157,3 +157,36 @@ No product-domain functionality has been implemented yet.
 Authentication, authorization, multi-tenancy, businesses, customers, services, staff, resources, availability, bookings, CRM, messaging, notifications, marketplace functionality, payments, subscriptions, billing, search, and production infrastructure remain outside the current authorized scope.
 
 No OAuth implementation details needed unless this file is explicitly your product/project overview.
+
+## UI priority clarification - 2026-10-14
+
+User requests functional testable UI throughout implementation. Beginner-friendly
+redesign and visual polish are deferred until the whole platform is functionally
+implemented. Continue responsive and workflow verification; do not treat cosmetic
+polish as a blocker for Phase 6. Phase 6.5 calendar/dashboard is complete; next is 6.6
+business customization/settings. CURRENT_STATE.md and milestone docs track progress.
+
+## Phase 6 development closure (2026-10-14)
+
+Phase 6.7 review is recorded in PHASE_6_CLOSURE.md. Business-facing functional scope
+is complete, with remaining production checks preserved in DEFERRED_WORK.md.
+Next is Phase 7.1 customer ownership/publishing boundaries; internal operator booking
+records must not be inferred to belong to customers. UI redesign remains deferred.
+
+## Phase 7.1 ownership boundary (2026-10-14)
+
+Customer identity is bookings.customer_id, independently of the operator in created_by.
+Legacy records remain unassigned. Customer reads require exact ownership; business
+reads/writes retain tenant membership authorization. Rescheduling preserves ownership.
+Publication state defaults false and remains private until an explicit review/publish
+UI and safe public projection are delivered. See CUSTOMER_FOUNDATION.md.
+
+
+## Current development handoff (2026-10-18)
+
+Phase 7.9 closes the customer-booking development scope; see CURRENT_STATE.md and
+PHASE_7_CLOSURE.md for the current status, superseding historical next-step entries.
+Next is Phase 8.1 tenant-scoped CRM foundation and its customer table UI. Account
+identity/profile is currently read-only. Messaging, payments, final UI redesign
+and production release checks remain separate. Read TO_REVISE.MD before phase work
+and clear its contents only after its requested fixes have been verified.

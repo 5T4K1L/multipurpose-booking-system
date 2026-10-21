@@ -12,7 +12,7 @@ import (
 )
 
 const createBusiness = `-- name: CreateBusiness :one
-INSERT INTO businesses(name,timezone) VALUES($1,$2) RETURNING id, name, timezone, status, created_at
+INSERT INTO businesses(name,timezone) VALUES($1,$2) RETURNING id, name, timezone, status, created_at, is_published
 `
 
 type CreateBusinessParams struct {
@@ -29,6 +29,7 @@ func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) 
 		&i.Timezone,
 		&i.Status,
 		&i.CreatedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
@@ -106,7 +107,7 @@ func (q *Queries) ListBusinessMemberships(ctx context.Context, arg ListBusinessM
 }
 
 const listUserBusinesses = `-- name: ListUserBusinesses :many
-SELECT b.id, b.name, b.timezone, b.status, b.created_at, m.role FROM businesses b
+SELECT b.id, b.name, b.timezone, b.status, b.created_at, b.is_published, m.role FROM businesses b
 JOIN business_memberships m ON m.business_id=b.id
 JOIN users u ON u.id=m.user_id
 WHERE m.user_id=$1 AND u.status='active' AND b.status='active'
@@ -123,12 +124,13 @@ type ListUserBusinessesParams struct {
 }
 
 type ListUserBusinessesRow struct {
-	ID        pgtype.UUID
-	Name      string
-	Timezone  string
-	Status    string
-	CreatedAt pgtype.Timestamptz
-	Role      string
+	ID          pgtype.UUID
+	Name        string
+	Timezone    string
+	Status      string
+	CreatedAt   pgtype.Timestamptz
+	IsPublished bool
+	Role        string
 }
 
 func (q *Queries) ListUserBusinesses(ctx context.Context, arg ListUserBusinessesParams) ([]ListUserBusinessesRow, error) {
@@ -152,6 +154,7 @@ func (q *Queries) ListUserBusinesses(ctx context.Context, arg ListUserBusinesses
 			&i.Timezone,
 			&i.Status,
 			&i.CreatedAt,
+			&i.IsPublished,
 			&i.Role,
 		); err != nil {
 			return nil, err
@@ -165,7 +168,7 @@ func (q *Queries) ListUserBusinesses(ctx context.Context, arg ListUserBusinesses
 }
 
 const lockBusiness = `-- name: LockBusiness :one
-SELECT id, name, timezone, status, created_at FROM businesses WHERE id=$1 AND status='active' FOR UPDATE
+SELECT id, name, timezone, status, created_at, is_published FROM businesses WHERE id=$1 AND status='active' FOR UPDATE
 `
 
 func (q *Queries) LockBusiness(ctx context.Context, id pgtype.UUID) (Business, error) {
@@ -177,12 +180,13 @@ func (q *Queries) LockBusiness(ctx context.Context, id pgtype.UUID) (Business, e
 		&i.Timezone,
 		&i.Status,
 		&i.CreatedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
 
 const lockBusinessAccess = `-- name: LockBusinessAccess :one
-SELECT b.id, b.name, b.timezone, b.status, b.created_at,m.role FROM businesses b
+SELECT b.id, b.name, b.timezone, b.status, b.created_at, b.is_published,m.role FROM businesses b
 JOIN business_memberships m ON m.business_id=b.id
 JOIN users u ON u.id=m.user_id
 WHERE b.id=$1 AND m.user_id=$2 AND b.status='active' AND u.status='active'
@@ -195,12 +199,13 @@ type LockBusinessAccessParams struct {
 }
 
 type LockBusinessAccessRow struct {
-	ID        pgtype.UUID
-	Name      string
-	Timezone  string
-	Status    string
-	CreatedAt pgtype.Timestamptz
-	Role      string
+	ID          pgtype.UUID
+	Name        string
+	Timezone    string
+	Status      string
+	CreatedAt   pgtype.Timestamptz
+	IsPublished bool
+	Role        string
 }
 
 func (q *Queries) LockBusinessAccess(ctx context.Context, arg LockBusinessAccessParams) (LockBusinessAccessRow, error) {
@@ -212,6 +217,7 @@ func (q *Queries) LockBusinessAccess(ctx context.Context, arg LockBusinessAccess
 		&i.Timezone,
 		&i.Status,
 		&i.CreatedAt,
+		&i.IsPublished,
 		&i.Role,
 	)
 	return i, err

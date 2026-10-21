@@ -50,7 +50,7 @@ func TestRegistrationIntegration(t *testing.T) {
 	group.Wait()
 	close(failures)
 	for err := range failures {
-		if err != nil {
+		if err != nil && !errors.Is(err, service.ErrEmailRegistered) {
 			t.Fatal(err)
 		}
 	}
@@ -68,7 +68,7 @@ func TestRegistrationIntegration(t *testing.T) {
 		t.Fatal("registration password not usable", err)
 	}
 	input.Password = "replacement password attempt"
-	if err := registration.Register(ctx, input); err != nil {
+	if err := registration.Register(ctx, input); !errors.Is(err, service.ErrEmailRegistered) {
 		t.Fatal(err)
 	}
 	unchanged, err := queries.GetUserCredential(ctx, user.ID)
@@ -83,7 +83,7 @@ func TestRegistrationIntegration(t *testing.T) {
 	if _, err := pool.Exec(ctx, "DELETE FROM user_credentials WHERE user_id=$1", user.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := registration.Register(ctx, input); err != nil {
+	if err := registration.Register(ctx, input); !errors.Is(err, service.ErrEmailRegistered) {
 		t.Fatal(err)
 	}
 	var credentials int

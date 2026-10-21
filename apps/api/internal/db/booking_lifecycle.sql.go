@@ -13,7 +13,7 @@ import (
 
 const closeBooking = `-- name: CloseBooking :one
 UPDATE bookings SET status=$3, closed_by=$4, closed_at=clock_timestamp()
-WHERE business_id=$1 AND id=$2 AND status='confirmed' RETURNING id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id
+WHERE business_id=$1 AND id=$2 AND status='confirmed' RETURNING id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id, customer_id
 `
 
 type CloseBookingParams struct {
@@ -50,6 +50,7 @@ func (q *Queries) CloseBooking(ctx context.Context, arg CloseBookingParams) (Boo
 		&i.ClosedAt,
 		&i.ClosedBy,
 		&i.SupersedesBookingID,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -83,8 +84,8 @@ func (q *Queries) CreateBookingChange(ctx context.Context, arg CreateBookingChan
 }
 
 const createReplacementBooking = `-- name: CreateReplacementBooking :one
-INSERT INTO bookings (business_id,service_id,location_id,staff_id,resource_id,created_by,idempotency_key,request_hash,starts_at,ends_at,busy_starts_at,busy_ends_at,supersedes_booking_id)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id
+INSERT INTO bookings (business_id,service_id,location_id,staff_id,resource_id,created_by,idempotency_key,request_hash,starts_at,ends_at,busy_starts_at,busy_ends_at,supersedes_booking_id,customer_id)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id, customer_id
 `
 
 type CreateReplacementBookingParams struct {
@@ -101,6 +102,7 @@ type CreateReplacementBookingParams struct {
 	BusyStartsAt        pgtype.Timestamptz
 	BusyEndsAt          pgtype.Timestamptz
 	SupersedesBookingID pgtype.UUID
+	CustomerID          pgtype.Int8
 }
 
 func (q *Queries) CreateReplacementBooking(ctx context.Context, arg CreateReplacementBookingParams) (Booking, error) {
@@ -118,6 +120,7 @@ func (q *Queries) CreateReplacementBooking(ctx context.Context, arg CreateReplac
 		arg.BusyStartsAt,
 		arg.BusyEndsAt,
 		arg.SupersedesBookingID,
+		arg.CustomerID,
 	)
 	var i Booking
 	err := row.Scan(
@@ -139,6 +142,7 @@ func (q *Queries) CreateReplacementBooking(ctx context.Context, arg CreateReplac
 		&i.ClosedAt,
 		&i.ClosedBy,
 		&i.SupersedesBookingID,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -170,7 +174,7 @@ func (q *Queries) GetBookingChange(ctx context.Context, arg GetBookingChangePara
 }
 
 const getTenantBooking = `-- name: GetTenantBooking :one
-SELECT id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id FROM bookings WHERE business_id=$1 AND id=$2
+SELECT id, business_id, service_id, location_id, staff_id, resource_id, created_by, idempotency_key, request_hash, starts_at, ends_at, busy_starts_at, busy_ends_at, status, created_at, closed_at, closed_by, supersedes_booking_id, customer_id FROM bookings WHERE business_id=$1 AND id=$2
 `
 
 type GetTenantBookingParams struct {
@@ -200,6 +204,7 @@ func (q *Queries) GetTenantBooking(ctx context.Context, arg GetTenantBookingPara
 		&i.ClosedAt,
 		&i.ClosedBy,
 		&i.SupersedesBookingID,
+		&i.CustomerID,
 	)
 	return i, err
 }

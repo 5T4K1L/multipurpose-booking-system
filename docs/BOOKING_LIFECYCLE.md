@@ -15,9 +15,9 @@ preparation has begun. The database rechecks the cutoff after obtaining its lock
 No fee, refund, configurable cancellation notice, completion or no-show policy is
 introduced. These require separate product rules.
 
-| Operation | Original record | Capacity | Result |
-|---|---|---|---|
-| Cancel | confirmed -> cancelled | Released on commit | Retained terminal record |
+| Operation  | Original record          | Capacity                                                   | Result                                  |
+| ---------- | ------------------------ | ---------------------------------------------------------- | --------------------------------------- |
+| Cancel     | confirmed -> cancelled   | Released on commit                                         | Retained terminal record                |
 | Reschedule | confirmed -> rescheduled | Old interval released and new interval reserved atomically | New confirmed record linked to original |
 
 Terminal records cannot be reactivated or changed again under a new key. Same-key
@@ -39,9 +39,9 @@ have changed, provided the booking has not reached its buffered start.
 Both endpoints require the existing session cookie, exact WEB_ORIGIN,
 application/json and one valid Idempotency-Key header. UUIDs are tenant scoped.
 
-| Method and path | Body |
-|---|---|
-| POST /api/v1/businesses/{businessID}/bookings/{bookingID}/cancel | `{}` |
+| Method and path                                                      | Body                                        |
+| -------------------------------------------------------------------- | ------------------------------------------- |
+| POST /api/v1/businesses/{businessID}/bookings/{bookingID}/cancel     | `{}`                                        |
 | POST /api/v1/businesses/{businessID}/bookings/{bookingID}/reschedule | `{"starts_at":"2030-01-15T10:00:00+08:00"}` |
 
 Both return 200 for first success and retry. Response fields:
@@ -126,3 +126,10 @@ DEFERRED_WORK.md. Phase 5.7 advisory slots now filter confirmed occupancy.
 
 Phase 5.7 read APIs and the booking test UI are complete; see BOOKING_WORKSPACE.md.
 Customer self-service, notifications, payments and frontend dashboards remain separate.
+
+## Phase 6.4 extension - 2026-10-14
+
+Migration 15 and POST /bookings/{bookingID}/complete add final completed status for
+owner/admin after busy_ends_at. The existing lifecycle idempotency and audit transaction
+are reused. Earlier statements excluding completion describe Phase 5.6 only.
+See BUSINESS_BOOKING_MANAGEMENT.md for current behavior and verification.

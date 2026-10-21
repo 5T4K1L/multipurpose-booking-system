@@ -527,6 +527,27 @@ func TestBookingLifecycleIntegration(t *testing.T) {
 	request(2, "POST", path, "{}", "http", origin, 409) // Action-bound idempotency key.
 	path = base + uuid(httpResult.Replacement.ID) + "/cancel"
 	request(2, "POST", path, "{}", "http-cancel", origin, 200)
+	deletePath := base + uuid(httpResult.Replacement.ID)
+	request(-1, "DELETE", deletePath, "", "", origin, 401)
+	request(1, "DELETE", deletePath, "", "", origin, 403)
+	request(0, "DELETE", deletePath, "", "", "https://foreign.invalid", 403)
+	request(0, "DELETE", base+uuid(second.ID), "", "", origin, 409)
+	request(2, "DELETE", deletePath, "", "", origin, 204)
+	request(2, "DELETE", deletePath, "", "", origin, 204)
+	listed := request(0, "GET", strings.TrimSuffix(base, "/"), "", "", origin, 200)
+	var listedBookings []service.BookingView
+	if e := json.Unmarshal(listed.Body.Bytes(), &listedBookings); e != nil {
+		t.Fatal(e)
+	}
+	for _, listedBooking := range listedBookings {
+		if listedBooking.ID == httpResult.Replacement.ID {
+			t.Fatal("deleted booking still listed")
+		}
+	}
+	var retained int
+	if e := pool.QueryRow(ctx, "SELECT count(*) FROM bookings WHERE id=$1", httpResult.Replacement.ID).Scan(&retained); e != nil || retained != 1 {
+		t.Fatal("history deleted", e)
+	}
 	if e := tenants.ChangeMember(ctx, users[0], a, users[2], service.RoleBusinessAdmin, true); e != nil {
 		t.Fatal(e)
 	}

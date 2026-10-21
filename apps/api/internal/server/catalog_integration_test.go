@@ -361,9 +361,9 @@ func TestCatalogHTTPIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	get(2, parentPath+"?cursor="+adminCursor, 403)
-	mutate(0, "DELETE", base+"locations/"+uuid(created["locations"].ID), "", 405)
+	mutate(0, "DELETE", base+"locations/"+uuid(created["locations"].ID), "", 204)
 	// The next phase owns lifecycle mutations; unsupported item updates are rejected.
-	mutate(0, "PUT", base+"services/"+uuid(created["services"].ID), `{"name":"Changed"}`, 405)
+	mutate(0, "PUT", base+"services/"+uuid(created["services"].ID), `{"name":"Changed"}`, 400)
 	if _, err := pool.Exec(ctx, "UPDATE businesses SET status='disabled' WHERE id=$1", businesses[0]); err != nil {
 		t.Fatal(err)
 	}

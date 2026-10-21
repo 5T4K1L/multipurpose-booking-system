@@ -957,6 +957,7 @@ Phase 3.13 adds server-defined role policies and a CUSTOMER baseline gate on
 memberships. See [RBAC](RBAC.md).
 
 Remaining Phase 3 integration includes:
+
 - live Google/Apple verification (route integration implemented; see OAUTH_SETUP.md)
 - interactive browser verification of authentication UI
 - security verification

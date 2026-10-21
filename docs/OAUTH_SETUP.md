@@ -24,15 +24,15 @@ Reference: [Google's server-side OpenID Connect flow](https://developers.google.
 
 ## Runtime settings
 
-| Setting | Meaning |
-| --- | --- |
-| GOOGLE_OAUTH_ENABLED | Exact true enables Google; false/empty disables it |
-| APPLE_OAUTH_ENABLED | Exact true enables Apple independently |
-| OAUTH_TRANSACTION_KEY | 32 random bytes, unpadded base64url; kept server-side |
+| Setting                  | Meaning                                                                                               |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| GOOGLE_OAUTH_ENABLED     | Exact true enables Google; false/empty disables it                                                    |
+| APPLE_OAUTH_ENABLED      | Exact true enables Apple independently                                                                |
+| OAUTH_TRANSACTION_KEY    | 32 random bytes, unpadded base64url; kept server-side                                                 |
 | OAUTH_ALLOW_REGISTRATION | true permits creation of a new local OAuth user; default false allows existing linked identities only |
-| WEB_ORIGIN | Browser origin, default http://localhost:3000 |
-| API_PUBLIC_ORIGIN | API origin, default http://localhost:8080 |
-| NEXT_PUBLIC_API_BASE_URL | Next build-time API address; must point to the same API origin |
+| WEB_ORIGIN               | Browser origin, default http://localhost:3000                                                         |
+| API_PUBLIC_ORIGIN        | API origin, default http://localhost:8080                                                             |
+| NEXT_PUBLIC_API_BASE_URL | Next build-time API address; must point to the same API origin                                        |
 
 Google additionally requires GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
 and GOOGLE_OAUTH_REDIRECT_URL. For the first new-account test, enable

@@ -69,17 +69,23 @@ func (q *Queries) CreateResource(ctx context.Context, arg CreateResourceParams) 
 }
 
 const createService = `-- name: CreateService :one
-INSERT INTO services(business_id,name,duration_minutes) VALUES($1,$2,$3) RETURNING id, business_id, name, duration_minutes, status, created_at, updated_at
+INSERT INTO services(business_id,name,duration_minutes,all_day) VALUES($1,$2,$3,$4) RETURNING id, business_id, name, duration_minutes, status, created_at, updated_at, all_day
 `
 
 type CreateServiceParams struct {
 	BusinessID      pgtype.UUID
 	Name            string
 	DurationMinutes int32
+	AllDay          bool
 }
 
 func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (Service, error) {
-	row := q.db.QueryRow(ctx, createService, arg.BusinessID, arg.Name, arg.DurationMinutes)
+	row := q.db.QueryRow(ctx, createService,
+		arg.BusinessID,
+		arg.Name,
+		arg.DurationMinutes,
+		arg.AllDay,
+	)
 	var i Service
 	err := row.Scan(
 		&i.ID,
@@ -89,21 +95,23 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AllDay,
 	)
 	return i, err
 }
 
 const createStaffProfile = `-- name: CreateStaffProfile :one
-INSERT INTO staff_profiles(business_id,name) VALUES($1,$2) RETURNING id, business_id, name, status, created_at, updated_at
+INSERT INTO staff_profiles(business_id,name,role_name) VALUES($1,$2,$3) RETURNING id, business_id, name, status, created_at, updated_at, role_name
 `
 
 type CreateStaffProfileParams struct {
 	BusinessID pgtype.UUID
 	Name       string
+	RoleName   string
 }
 
 func (q *Queries) CreateStaffProfile(ctx context.Context, arg CreateStaffProfileParams) (StaffProfile, error) {
-	row := q.db.QueryRow(ctx, createStaffProfile, arg.BusinessID, arg.Name)
+	row := q.db.QueryRow(ctx, createStaffProfile, arg.BusinessID, arg.Name, arg.RoleName)
 	var i StaffProfile
 	err := row.Scan(
 		&i.ID,
@@ -112,6 +120,7 @@ func (q *Queries) CreateStaffProfile(ctx context.Context, arg CreateStaffProfile
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoleName,
 	)
 	return i, err
 }
@@ -168,7 +177,7 @@ func (q *Queries) GetResource(ctx context.Context, arg GetResourceParams) (Resou
 }
 
 const getService = `-- name: GetService :one
-SELECT id, business_id, name, duration_minutes, status, created_at, updated_at FROM services WHERE business_id=$1 AND id=$2 AND status='active'
+SELECT id, business_id, name, duration_minutes, status, created_at, updated_at, all_day FROM services WHERE business_id=$1 AND id=$2 AND status='active'
 `
 
 type GetServiceParams struct {
@@ -187,12 +196,13 @@ func (q *Queries) GetService(ctx context.Context, arg GetServiceParams) (Service
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AllDay,
 	)
 	return i, err
 }
 
 const getStaffProfile = `-- name: GetStaffProfile :one
-SELECT id, business_id, name, status, created_at, updated_at FROM staff_profiles WHERE business_id=$1 AND id=$2 AND status='active'
+SELECT id, business_id, name, status, created_at, updated_at, role_name FROM staff_profiles WHERE business_id=$1 AND id=$2 AND status='active'
 `
 
 type GetStaffProfileParams struct {
@@ -210,6 +220,7 @@ func (q *Queries) GetStaffProfile(ctx context.Context, arg GetStaffProfileParams
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoleName,
 	)
 	return i, err
 }
@@ -311,7 +322,7 @@ func (q *Queries) ListResources(ctx context.Context, arg ListResourcesParams) ([
 }
 
 const listServices = `-- name: ListServices :many
-SELECT t.id, t.business_id, t.name, t.duration_minutes, t.status, t.created_at, t.updated_at FROM services t
+SELECT t.id, t.business_id, t.name, t.duration_minutes, t.status, t.created_at, t.updated_at, t.all_day FROM services t
 WHERE t.business_id=$1 AND t.status='active'
 AND (NOT $2::boolean OR t.id > $3::uuid)
 ORDER BY t.id LIMIT $4
@@ -346,6 +357,7 @@ func (q *Queries) ListServices(ctx context.Context, arg ListServicesParams) ([]S
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AllDay,
 		); err != nil {
 			return nil, err
 		}
@@ -358,7 +370,7 @@ func (q *Queries) ListServices(ctx context.Context, arg ListServicesParams) ([]S
 }
 
 const listStaffProfiles = `-- name: ListStaffProfiles :many
-SELECT t.id, t.business_id, t.name, t.status, t.created_at, t.updated_at FROM staff_profiles t
+SELECT t.id, t.business_id, t.name, t.status, t.created_at, t.updated_at, t.role_name FROM staff_profiles t
 WHERE t.business_id=$1 AND t.status='active'
 AND (NOT $2::boolean OR t.id > $3::uuid)
 ORDER BY t.id LIMIT $4
@@ -392,6 +404,7 @@ func (q *Queries) ListStaffProfiles(ctx context.Context, arg ListStaffProfilesPa
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RoleName,
 		); err != nil {
 			return nil, err
 		}

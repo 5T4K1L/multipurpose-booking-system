@@ -16,7 +16,10 @@ PUT accepts one complete replacement, for example:
 ```json
 {
   "windows": [
-    { "starts_at": "2026-10-12T09:00:00+08:00", "ends_at": "2026-10-12T17:00:00+08:00" }
+    {
+      "starts_at": "2026-10-12T09:00:00+08:00",
+      "ends_at": "2026-10-12T17:00:00+08:00"
+    }
   ]
 }
 ```

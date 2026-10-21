@@ -32,6 +32,9 @@ type BookingChangeResult struct {
 	Replayed    bool           `json:"replayed"`
 }
 
+func (s *BookingService) Complete(ctx context.Context, actor int64, business, id pgtype.UUID, key string) (BookingChangeResult, error) {
+	return s.change(ctx, actor, business, id, key, "complete", time.Time{})
+}
 func (s *BookingService) Cancel(ctx context.Context, actor int64, business, id pgtype.UUID, key string) (BookingChangeResult, error) {
 	return s.change(ctx, actor, business, id, key, "cancel", time.Time{})
 }
@@ -78,10 +81,13 @@ func (s *BookingService) change(ctx context.Context, actor int64, business, id p
 		if e != nil {
 			return e
 		}
-		if old.Status != "confirmed" || !time.Now().Before(old.BusyStartsAt.Time) {
+		if old.Status != "confirmed" || (action == "complete" && time.Now().Before(old.BusyEndsAt.Time)) || (action != "complete" && !time.Now().Before(old.BusyStartsAt.Time)) {
 			return ErrBookingState
 		}
 		status := "cancelled"
+		if action == "complete" {
+			status = "completed"
+		}
 		var params db.CreateBookingParams
 		if action == "reschedule" {
 			if start.Equal(old.StartsAt.Time) {
@@ -89,7 +95,21 @@ func (s *BookingService) change(ctx context.Context, actor int64, business, id p
 			}
 			// The reserved prefix cannot be supplied as a public creation key.
 			internalKey := fmt.Sprintf("~reschedule:%x", id.Bytes)
-			params, e = prepareBooking(ctx, q, a, internalKey, hash, BookingInput{old.ServiceID, old.LocationID, old.StaffID, old.ResourceID, start})
+			var duration []int32
+			if old.CustomerID.Valid {
+				offered, e := q.GetService(ctx, db.GetServiceParams{BusinessID: a.BusinessID(), ID: old.ServiceID})
+				if e != nil {
+					return e
+				}
+				minutes := int32(old.EndsAt.Time.Sub(old.StartsAt.Time) / time.Minute)
+				if minutes != offered.DurationMinutes {
+					if _, e := customerDuration(ctx, q, a.BusinessID(), old.ServiceID, minutes); e != nil {
+						return ErrBookingConflict
+					}
+					duration = []int32{minutes}
+				}
+			}
+			params, e = prepareBooking(ctx, q, a, internalKey, hash, BookingInput{old.ServiceID, old.LocationID, old.StaffID, old.ResourceID, start}, duration...)
 			if e != nil {
 				return e
 			}
@@ -111,7 +131,7 @@ func (s *BookingService) change(ctx context.Context, actor int64, business, id p
 				StaffID: params.StaffID, ResourceID: params.ResourceID, CreatedBy: params.CreatedBy,
 				IdempotencyKey: params.IdempotencyKey, RequestHash: params.RequestHash,
 				StartsAt: params.StartsAt, EndsAt: params.EndsAt, BusyStartsAt: params.BusyStartsAt, BusyEndsAt: params.BusyEndsAt,
-				SupersedesBookingID: id,
+				SupersedesBookingID: id, CustomerID: old.CustomerID,
 			})
 			if e != nil {
 				return e

@@ -967,7 +967,6 @@ Infrastructure details are not included in returned service error messages.
 
 Session initiation is implemented by Phase 3.7. Callback/HTTP wiring is still deferred.
 
-
 ## Phase 3.7 Session Policy
 
 The SessionService creates independent opaque 256-bit random bearer tokens and stores

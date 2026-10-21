@@ -170,7 +170,7 @@ func TestOAuthRoutesSignedProviderFlow(t *testing.T) {
 			f := newOAuthFixture(t, p, login)
 			cookie := f.start(t)
 			rec := f.callback(t, cookie, nil)
-			if rec.Code != 303 || rec.Header().Get("Location") != "https://web.example/account" || login.calls != 1 || !login.identity.EmailVerified || login.identity.Provider != p {
+			if rec.Code != 303 || rec.Header().Get("Location") != "https://web.example/business" || login.calls != 1 || !login.identity.EmailVerified || login.identity.Provider != p {
 				t.Fatalf("callback %d %s", rec.Code, rec.Header().Get("Location"))
 			}
 			cookies := rec.Result().Cookies()

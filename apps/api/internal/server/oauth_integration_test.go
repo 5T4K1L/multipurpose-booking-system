@@ -65,7 +65,7 @@ func TestOAuthDatabaseSessionHandoff(t *testing.T) {
 			f.routes.login = service.NewOAuthLoginService(authentication, sessions, true)
 			cookie := f.start(t)
 			rec := f.callback(t, cookie, nil)
-			if rec.Header().Get("Location") != "https://web.example/account" {
+			if rec.Header().Get("Location") != "https://web.example/business" {
 				t.Fatal("OAuth login did not complete")
 			}
 			cookies := rec.Result().Cookies()

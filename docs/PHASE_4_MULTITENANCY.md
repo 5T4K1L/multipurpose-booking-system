@@ -29,14 +29,14 @@ Content-Type application/json, reject unknown fields/trailing values, and cap at
 Mutation rate limit: 60 requests per transport peer per 15 minutes per API process.
 All responses use Cache-Control: no-store. Preflight does not require a session.
 
-| Method | Path suffix | Behavior |
-|---|---|---|
-| POST | (none) | `{ "name": "Example", "timezone": "Asia/Shanghai" }`; returns business, 201 |
-| GET | (none) | Returns caller's businesses, 200 |
-| GET | /{businessID} | Returns business and caller's scoped role, 200 |
-| GET | /{businessID}/memberships | Returns user_id/role entries, 200 |
-| PUT | /{businessID}/memberships/{userID} | `{ "role": "STAFF" }`; upserts membership, 204 |
-| DELETE | /{businessID}/memberships/{userID} | Removes a non-owner membership, 204; absent member is idempotent |
+| Method | Path suffix                        | Behavior                                                                    |
+| ------ | ---------------------------------- | --------------------------------------------------------------------------- |
+| POST   | (none)                             | `{ "name": "Example", "timezone": "Asia/Shanghai" }`; returns business, 201 |
+| GET    | (none)                             | Returns caller's businesses, 200                                            |
+| GET    | /{businessID}                      | Returns business and caller's scoped role, 200                              |
+| GET    | /{businessID}/memberships          | Returns user_id/role entries, 200                                           |
+| PUT    | /{businessID}/memberships/{userID} | `{ "role": "STAFF" }`; upserts membership, 204                              |
+| DELETE | /{businessID}/memberships/{userID} | Removes a non-owner membership, 204; absent member is idempotent            |
 
 Business response fields: id, name, timezone, role. Lists are arrays (empty is `[]`).
 Invalid input returns 400, missing/invalid session 401, denied access 403, and

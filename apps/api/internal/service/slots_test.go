@@ -109,3 +109,58 @@ func TestAvailabilityWindowValidation(t *testing.T) {
 		t.Fatal("clear windows rejected", e)
 	}
 }
+
+func TestWholeDayStartsDuringHoursAndContinuesOvernight(t *testing.T) {
+	ctx := context.Background()
+	day, _ := time.Parse("2006-01-02", "2027-03-13")
+	zone, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hours := []WeeklyHours{{Weekday: 6, StartMinute: 600, EndMinute: 1200}}
+	now := day.Add(-48 * time.Hour)
+	slots, err := calculateSlots(ctx, day, zone, hours, map[string]bool{}, 1440, SchedulingRulesInput{}, nil, now, true)
+	if err != nil || len(slots) != 40 {
+		t.Fatalf("overnight availability: %d %v", len(slots), err)
+	}
+	for _, slot := range slots {
+		local := slot.StartsAt.In(zone)
+		if local.Hour() < 10 || local.Hour() >= 20 || slot.EndsAt.Sub(slot.StartsAt) != 24*time.Hour {
+			t.Fatal("invalid overnight slot", slot)
+		}
+	}
+	closed, err := calculateSlots(ctx, day, zone, hours, map[string]bool{"2027-03-14": true}, 1440, SchedulingRulesInput{}, nil, now, true)
+	if err != nil || len(closed) != 0 {
+		t.Fatal("explicit closed date bypassed", err)
+	}
+	timed, err := calculateSlots(ctx, day, zone, hours, map[string]bool{}, 1440, SchedulingRulesInput{}, nil, now)
+	if err != nil || len(timed) != 0 {
+		t.Fatal("normal duration escaped opening hours", err)
+	}
+}
+
+func TestWholeBusinessDay(t *testing.T) {
+	day := mustInstant(t, "2027-03-13T00:00:00Z")
+	zone, e := time.LoadLocation("Asia/Manila")
+	if e != nil {
+		t.Fatal(e)
+	}
+	hours := []WeeklyHours{{Weekday: 6, StartMinute: 600, EndMinute: 720}, {Weekday: 6, StartMinute: 780, EndMinute: 1200}}
+	now := day.Add(-48 * time.Hour)
+	slots, e := wholeBusinessDay(context.Background(), day, zone, hours, map[string]bool{}, SchedulingRulesInput{}, now)
+	if e != nil || len(slots) != 1 {
+		t.Fatal(slots, e)
+	}
+	s := slots[0]
+	if s.StartsAt.In(zone).Hour() != 10 || s.EndsAt.In(zone).Hour() != 20 || s.EndsAt.Sub(s.StartsAt) != 10*time.Hour {
+		t.Fatal(s)
+	}
+	closed, e := wholeBusinessDay(context.Background(), day, zone, hours, map[string]bool{"2027-03-13": true}, SchedulingRulesInput{}, now)
+	if e != nil || len(closed) != 0 {
+		t.Fatal("closed day offered", e)
+	}
+	late, e := wholeBusinessDay(context.Background(), day, zone, hours, map[string]bool{}, SchedulingRulesInput{}, s.StartsAt.Add(time.Minute))
+	if e != nil || len(late) != 0 {
+		t.Fatal("part of day offered", e)
+	}
+}

@@ -8,12 +8,12 @@ existing safe profile response. Public registration, login, and logout stay publ
 
 ## Policies
 
-| Role | Current behavior |
-| --- | --- |
-| CUSTOMER | Baseline for every active local account; no stored grant needed |
-| PLATFORM_ADMIN | Requires an explicit user_platform_roles grant |
-| PLATFORM_OPERATOR | Requires an explicit user_platform_roles grant |
-| BUSINESS_OWNER, BUSINESS_ADMIN, MANAGER, STAFF | Denied until Phase 4 membership integration |
+| Role                                           | Current behavior                                                |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| CUSTOMER                                       | Baseline for every active local account; no stored grant needed |
+| PLATFORM_ADMIN                                 | Requires an explicit user_platform_roles grant                  |
+| PLATFORM_OPERATOR                              | Requires an explicit user_platform_roles grant                  |
+| BUSINESS_OWNER, BUSINESS_ADMIN, MANAGER, STAFF | Denied until Phase 4 membership integration                     |
 
 RequireAnyRole accepts an authenticated server-derived user ID and a server-owned
 list of roles. Any matching supported role permits access. Empty/unknown policies,

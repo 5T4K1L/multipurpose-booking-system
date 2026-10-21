@@ -74,7 +74,7 @@ func TestBusinessPaginationIntegration(t *testing.T) {
 	if rows.Err() != nil {
 		t.Fatal(rows.Err())
 	}
-	if _, err = pool.Exec(ctx, "INSERT INTO business_memberships(business_id,user_id,role) SELECT unnest($1::uuid[]),$2,'BUSINESS_OWNER'", businesses, users[0]); err != nil {
+	if _, err = pool.Exec(ctx, "INSERT INTO business_memberships(business_id,user_id,role) SELECT unnest($1::uuid[]),$2,'BUSINESS_ADMIN'", businesses, users[0]); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = pool.Exec(ctx, "INSERT INTO business_memberships(business_id,user_id,role) SELECT $1,unnest($2::bigint[]),'STAFF'", businesses[0], users[1:]); err != nil {
@@ -180,6 +180,10 @@ func TestBusinessPaginationIntegration(t *testing.T) {
 	request(path+"?cursor="+first.Header().Get("X-Next-Cursor"), 400)
 	otherJSON, _ := businesses[1].MarshalJSON()
 	request("/"+string(otherJSON[1:len(otherJSON)-1])+"/memberships?cursor="+memberCursor, 400)
+	// The pagination actor administers many tenants but owns only this one.
+	if _, err := pool.Exec(ctx, "UPDATE business_memberships SET role='BUSINESS_OWNER' WHERE business_id=$1 AND user_id=$2", businesses[0], users[0]); err != nil {
+		t.Fatal(err)
+	}
 	// A valid cursor never preserves a revoked permission.
 	if err := svc.ChangeMember(ctx, users[0], businesses[0], users[1], service.RoleBusinessAdmin, false); err != nil {
 		t.Fatal(err)

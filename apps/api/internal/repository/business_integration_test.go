@@ -49,11 +49,23 @@ func TestTenantConcurrentRevocation(t *testing.T) {
 	}
 	svc := service.NewBusinessService(NewBusinessTransactions(pool))
 	for i := 0; i < 2; i++ {
-		b, e := svc.Create(ctx, owner, service.BusinessInput{Name: "concurrency fixture", Timezone: "UTC"})
+		creator := owner
+		if i == 1 {
+			if e := pool.QueryRow(ctx, "INSERT INTO users(email,username) VALUES($1,'Second owner') RETURNING id", fmt.Sprintf("second-owner-%d@example.invalid", time.Now().UnixNano())).Scan(&creator); e != nil {
+				t.Fatal(e)
+			}
+			ids = append(ids, creator)
+		}
+		b, e := svc.Create(ctx, creator, service.BusinessInput{Name: "concurrency fixture", Timezone: "UTC"})
 		if e != nil {
 			t.Fatal(e)
 		}
 		businesses = append(businesses, b.ID)
+		if i == 1 {
+			if e := svc.ChangeMember(ctx, creator, b.ID, owner, service.RoleBusinessAdmin, false); e != nil {
+				t.Fatal(e)
+			}
+		}
 	}
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {

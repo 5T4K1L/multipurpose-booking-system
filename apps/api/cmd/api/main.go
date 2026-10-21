@@ -88,6 +88,15 @@ func main() {
 		log.Fatal(err)
 	}
 	server.RegisterBookingRoutes(mux, bookingHandler)
+	if err := server.RegisterCustomerFoundationRoutes(mux, sessionService, businessService, webOrigin); err != nil {
+		log.Fatal(err)
+	}
+	if err := server.RegisterGuestRoutes(mux, businessService, webOrigin); err != nil {
+		log.Fatal(err)
+	}
+	if err := server.RegisterBusinessImageRoutes(mux, sessionService, businessService, webOrigin); err != nil {
+		log.Fatal(err)
+	}
 	oauthConfig, err := auth.LoadEnabledOAuthConfig()
 	if err != nil {
 		log.Fatal(err)

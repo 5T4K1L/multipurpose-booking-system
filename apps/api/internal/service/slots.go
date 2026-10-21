@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"multipurpose-booking-system/api/internal/db"
 	"time"
@@ -30,7 +28,7 @@ func (s *BookingCatalogService) CalculateSlots(ctx context.Context, actor int64,
 		return SlotResult{}, ErrInvalidCatalog
 	}
 	return catalogOperation(ctx, s, actor, business, false, func(q BookingCatalogStore, a TenantAccess) (SlotResult, error) {
-		result, e := calculateCatalogSlots(ctx, q, a, id, in, day)
+		result, e := calculateCatalogSlots(ctx, q, a.BusinessID(), id, in, day)
 		if e != nil {
 			return SlotResult{}, e
 		}
@@ -39,12 +37,12 @@ func (s *BookingCatalogService) CalculateSlots(ctx context.Context, actor int64,
 }
 
 // Shared by advisory reads and booking creation inside the caller's transaction.
-func calculateCatalogSlots(ctx context.Context, q BookingCatalogStore, a TenantAccess, id pgtype.UUID, in SlotRequest, day time.Time) (SlotResult, error) {
-	offered, e := q.GetService(ctx, db.GetServiceParams{BusinessID: a.BusinessID(), ID: id})
+func calculateCatalogSlots(ctx context.Context, q BookingCatalogStore, business, id pgtype.UUID, in SlotRequest, day time.Time, requestedDuration ...int32) (SlotResult, error) {
+	offered, e := q.GetService(ctx, db.GetServiceParams{BusinessID: business, ID: id})
 	if e != nil {
 		return SlotResult{}, e
 	}
-	loc, e := q.GetLocation(ctx, db.GetLocationParams{BusinessID: a.BusinessID(), ID: in.LocationID})
+	loc, e := q.GetLocation(ctx, db.GetLocationParams{BusinessID: business, ID: in.LocationID})
 	if e != nil {
 		return SlotResult{}, e
 	}
@@ -53,50 +51,37 @@ func calculateCatalogSlots(ctx context.Context, q BookingCatalogStore, a TenantA
 		return SlotResult{}, e
 	}
 	result := SlotResult{Date: in.Date, Timezone: loc.Timezone, Advisory: true, Slots: []Slot{}}
-	windows := [][]AvailabilityWindow{}
+	// Business location hours govern availability; staff and resources follow them.
 	if in.StaffID.Valid {
-		if e := availabilityEntity(ctx, q, a.BusinessID(), in.StaffID, "staff"); e != nil {
+		if e := availabilityEntity(ctx, q, business, in.StaffID, "staff"); e != nil {
 			return SlotResult{}, e
 		}
-		w, e := availabilityWindows(ctx, q, a.BusinessID(), in.StaffID, "staff")
-		if e != nil {
-			return SlotResult{}, e
-		}
-		windows = append(windows, w)
 	}
 	if in.ResourceID.Valid {
-		r, e := q.GetResource(ctx, db.GetResourceParams{BusinessID: a.BusinessID(), ID: in.ResourceID})
+		r, e := q.GetResource(ctx, db.GetResourceParams{BusinessID: business, ID: in.ResourceID})
 		if e != nil {
 			return SlotResult{}, e
 		}
 		if r.LocationID != in.LocationID {
 			return result, nil
 		}
-		w, e := availabilityWindows(ctx, q, a.BusinessID(), in.ResourceID, "resources")
-		if e != nil {
-			return SlotResult{}, e
-		}
-		windows = append(windows, w)
 	}
-	eligible, e := q.CheckSlotEligibility(ctx, db.CheckSlotEligibilityParams{BusinessID: a.BusinessID(), ServiceID: id, LocationID: in.LocationID, WithStaff: in.StaffID.Valid, StaffID: in.StaffID, WithResource: in.ResourceID.Valid, ResourceID: in.ResourceID})
+	eligible, e := q.CheckSlotEligibility(ctx, db.CheckSlotEligibilityParams{BusinessID: business, ServiceID: id, LocationID: in.LocationID, WithStaff: in.StaffID.Valid, StaffID: in.StaffID, WithResource: in.ResourceID.Valid, ResourceID: in.ResourceID})
 	if e != nil {
 		return SlotResult{}, e
 	}
 	if !eligible.ServiceLocation || !eligible.StaffEligible.Valid || !eligible.StaffEligible.Bool || !eligible.ResourceEligible.Valid || !eligible.ResourceEligible.Bool {
 		return result, nil
 	}
-	rules, e := q.GetServiceSchedulingRules(ctx, db.GetServiceSchedulingRulesParams{BusinessID: a.BusinessID(), ServiceID: id})
-	if errors.Is(e, pgx.ErrNoRows) {
-		return result, nil
-	}
+	rules, e := effectiveSchedulingRules(ctx, q, db.GetServiceSchedulingRulesParams{BusinessID: business, ServiceID: id})
 	if e != nil {
 		return SlotResult{}, e
 	}
-	hours, e := q.ListLocationWeeklyHours(ctx, db.ListLocationWeeklyHoursParams{BusinessID: a.BusinessID(), LocationID: in.LocationID})
+	hours, e := q.ListLocationWeeklyHours(ctx, db.ListLocationWeeklyHoursParams{BusinessID: business, LocationID: in.LocationID})
 	if e != nil {
 		return SlotResult{}, e
 	}
-	dates, e := q.ListLocationClosedDates(ctx, db.ListLocationClosedDatesParams{BusinessID: a.BusinessID(), LocationID: in.LocationID})
+	dates, e := q.ListLocationClosedDates(ctx, db.ListLocationClosedDatesParams{BusinessID: business, LocationID: in.LocationID})
 	if e != nil {
 		return SlotResult{}, e
 	}
@@ -108,7 +93,15 @@ func calculateCatalogSlots(ctx context.Context, q BookingCatalogStore, a TenantA
 	for _, d := range dates {
 		closed[d.Time.Format("2006-01-02")] = true
 	}
-	result.Slots, e = calculateSlots(ctx, day, zone, weekly, closed, offered.DurationMinutes, SchedulingRulesInput{rules.BufferBeforeMinutes, rules.BufferAfterMinutes, rules.MinimumLeadMinutes}, windows, time.Now().UTC())
+	if offered.AllDay {
+		result.Slots, e = wholeBusinessDay(ctx, day, zone, weekly, closed, SchedulingRulesInput{rules.BufferBeforeMinutes, rules.BufferAfterMinutes, rules.MinimumLeadMinutes}, time.Now().UTC())
+		return result, e
+	}
+	duration := offered.DurationMinutes
+	if len(requestedDuration) > 0 {
+		duration = requestedDuration[0]
+	}
+	result.Slots, e = calculateSlots(ctx, day, zone, weekly, closed, duration, SchedulingRulesInput{rules.BufferBeforeMinutes, rules.BufferAfterMinutes, rules.MinimumLeadMinutes}, nil, time.Now().UTC(), offered.AllDay)
 	if e != nil {
 		return SlotResult{}, e
 	}
@@ -132,12 +125,15 @@ func windowCovers(windows []AvailabilityWindow, start, end time.Time) bool {
 
 // Walk real instants rather than constructing local times (which can be missing
 // or repeated). Prefix sums verify every elapsed minute of buffered occupancy.
+// Whole-day services require an open start, then may continue overnight. Explicit
+// closed dates still block the entire occupied interval, as do allocations.
 // The fixed one-date/15-minute grid bounds work and returns both fall-back folds.
-func calculateSlots(ctx context.Context, day time.Time, zone *time.Location, hours []WeeklyHours, closed map[string]bool, duration int32, rules SchedulingRulesInput, windows [][]AvailabilityWindow, now time.Time) ([]Slot, error) {
+func calculateSlots(ctx context.Context, day time.Time, zone *time.Location, hours []WeeklyHours, closed map[string]bool, duration int32, rules SchedulingRulesInput, windows [][]AvailabilityWindow, now time.Time, overnight ...bool) ([]Slot, error) {
 	out := []Slot{}
 	if duration < 1 || duration > 10080 || rules.BufferBeforeMinutes < 0 || rules.BufferBeforeMinutes > 1440 || rules.BufferAfterMinutes < 0 || rules.BufferAfterMinutes > 1440 || rules.MinimumLeadMinutes < 0 || rules.MinimumLeadMinutes > 525600 {
 		return nil, ErrInvalidCatalog
 	}
+	continueOvernight := len(overnight) > 0 && overnight[0]
 	before, after, length := int(rules.BufferBeforeMinutes), int(rules.BufferAfterMinutes), int(duration)
 	start := day.Add(-48 * time.Hour)
 	n := 4*1440 + before + after + length
@@ -152,6 +148,9 @@ func calculateSlots(ctx context.Context, day time.Time, zone *time.Location, hou
 		minute := int32(local.Hour()*60 + local.Minute())
 		open := false
 		if !closed[local.Format("2006-01-02")] {
+			if continueOvernight {
+				open = true
+			}
 			for _, h := range hours {
 				if h.Weekday == int32(local.Weekday()) && h.StartMinute <= minute && minute < h.EndMinute {
 					open = true
@@ -176,6 +175,19 @@ func calculateSlots(ctx context.Context, day time.Time, zone *time.Location, hou
 		if local.Format("2006-01-02") != day.Format("2006-01-02") || local.Minute()%15 != 0 || local.Second() != 0 || instant.Before(earliest) {
 			continue
 		}
+		if continueOvernight {
+			startsDuringHours := false
+			minute := int32(local.Hour()*60 + local.Minute())
+			for _, h := range hours {
+				if h.Weekday == int32(local.Weekday()) && h.StartMinute <= minute && minute < h.EndMinute {
+					startsDuringHours = true
+					break
+				}
+			}
+			if !startsDuringHours {
+				continue
+			}
+		}
 		if blocked[i+length+after] != blocked[i-before] {
 			continue
 		}
@@ -196,4 +208,46 @@ func calculateSlots(ctx context.Context, day time.Time, zone *time.Location, hou
 		}
 	}
 	return out, nil
+}
+
+// Reserve opening through closing on one local date, including any midday break.
+func wholeBusinessDay(ctx context.Context, day time.Time, zone *time.Location, hours []WeeklyHours, closed map[string]bool, rules SchedulingRulesInput, now time.Time) ([]Slot, error) {
+	out := []Slot{}
+	date := day.Format("2006-01-02")
+	if closed[date] {
+		return out, nil
+	}
+	var first, last time.Time
+	for instant, end := day.Add(-48*time.Hour), day.Add(48*time.Hour); instant.Before(end); instant = instant.Add(time.Minute) {
+		if e := ctx.Err(); e != nil {
+			return nil, e
+		}
+		local := instant.In(zone)
+		if local.Format("2006-01-02") != date {
+			continue
+		}
+		minute := int32(local.Hour()*60 + local.Minute())
+		for _, h := range hours {
+			if int32(local.Weekday()) == h.Weekday && minute >= h.StartMinute && minute < h.EndMinute {
+				if first.IsZero() {
+					first = instant
+				}
+				last = instant.Add(time.Minute)
+				break
+			}
+		}
+	}
+	if first.IsZero() || first.Before(now.Add(time.Duration(rules.MinimumLeadMinutes)*time.Minute)) {
+		return out, nil
+	}
+	busyStart, busyEnd := first.Add(-time.Duration(rules.BufferBeforeMinutes)*time.Minute), last.Add(time.Duration(rules.BufferAfterMinutes)*time.Minute)
+	if busyStart.Before(now) {
+		return out, nil
+	}
+	for t := busyStart; t.Before(busyEnd); t = t.Add(time.Minute) {
+		if closed[t.In(zone).Format("2006-01-02")] {
+			return out, nil
+		}
+	}
+	return append(out, Slot{StartsAt: first, EndsAt: last}), nil
 }

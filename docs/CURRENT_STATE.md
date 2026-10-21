@@ -2,23 +2,54 @@
 
 ## Current Phase
 
-PHASE 5 - Core Booking Engine (development scope complete; 2026-10-13)
+PHASE 8 - Customer CRM + Import/Export (in progress; 2026-10-19).
 
 ## Current Step
 
-5.7 - Booking read APIs, occupancy-aware slots and booking test UI completed.
-Open http://localhost:3000/bookings and follow [BOOKING_WORKSPACE.md](BOOKING_WORKSPACE.md).
-The UI supports saved demo setup, booking, current/history reads, rescheduling and
-cancellation. Phase 5 now includes its required test UI before development closure.
-Full database-enabled Go tests/build/vet, frontend lint/build and isolated headless
-Chrome booking flow passed, including desktop/mobile screenshot review.
-Schema remains migration 14. Advisory slots reflect occupancy but never reserve it.
+Booking availability correction (2026-10-19): missing optional scheduling rules now
+use zero-minute defaults; legacy staff without branch assignments follow service
+branches and equipment is branch-specific. Local database/API/frontend are running.
+See [BOOKING_AVAILABILITY_FIX.md](BOOKING_AVAILABILITY_FIX.md) for root causes,
+validation and changed files. No database reset or phase advancement was performed.
 
-Next: Phase 6.1 business workspace and catalog-management UI. Customer self-service
-and production sign-off remain outside this completed development scope.
-Phase 4 business/membership development scope remains complete.
+Guest booking and owner onboarding revisions completed (2026-10-19).
+See [GUEST_BOOKINGS.md](GUEST_BOOKINGS.md) for guest access/recovery, image
+publication, the requested database reset, verification and changed files.
+Schema is now 22, clean. Customers book/manage without sign-in; accounts are for
+business owners, limited to one owned business. TO_REVISE_SOON.md is complete
+and cleared. Remaining TO_REVISE.MD UI work still precedes Phase 8.2.
 
-Google remains enabled; Apple setup/live verification is deferred by user instruction.
+
+UI/UX revisions are now the active priority (2026-10-19), before continuing Phase 8.
+Shared design tokens, Light/Dark/System mode, responsive navigation, home/auth cards
+and discovery styling are delivered; see UI_DESIGN_FOUNDATION.md for validation and
+file list. TO_REVISE.MD retains incomplete page/component redesign work. Finish
+those revisions before resuming Phase 8. The user's latest preference is to continue
+Phase 8 without UI first after this redesign; it supersedes UI-after-each-phase.
+
+
+Phase 8.1 tenant-scoped customer table foundation complete. Open
+`/business/customers` or use Customers in Business workspace. Owners/admins see
+only customers with owned bookings at the selected business, with name/email,
+booking-record counts and latest booking time. Search, refresh and pagination
+are implemented. See CUSTOMER_CRM.md for access, tests, boundaries and file list.
+Phase 8.1 required no migration; the later guest revision advances schema to 22. TO_REVISE.MD was empty at Phase 8.1 completion; it now contains the active UI/UX backlog.
+
+After the active UI revisions: Phase 8.2 customer filtering and sorting. Manual contacts, editing, bulk
+actions, import/export and audit remain separate Phase 8 work. Phase 7 development
+closure is recorded in PHASE_7_CLOSURE.md; full UI redesign remains deferred.
+The user reported full usage before this task; current remaining account balance
+is not available to the agent.
+
+Milestone reporting preference: include edited filenames and a usage note after
+EACH milestone (for example 7.5). Account credits/token balance is not exposed to
+this agent; report unavailable rather than inventing a remaining amount.
+
+Google local credentials were restored on 2026-10-14 using the user's new external
+JSON file. The Google-enabled API is running; provider discovery and the visible
+Continue with Google button passed browser verification. A fresh consent/callback
+with the replacement client still needs the user's sign-in test.
+Apple setup/live verification remains deferred by user instruction.
 [DEFERRED_WORK.md](DEFERRED_WORK.md) preserves Apple, browser, race-detector and
 production checks. This is not unconditional Phase 3 closure or production sign-off.
 
@@ -731,7 +762,6 @@ After Phase 3 completion:
 
 Next task: live Google setup/verification, then Apple and closure review; Phase 4 remains gated.
 
-
 ## Phase 3.7 Implementation and Verification
 
 - `internal/service/session.go` provides creation, validation, single-token revocation,
@@ -949,3 +979,36 @@ Next task: live Google setup/verification, then Apple and closure review; Phase 
 - Apple remains disabled and live-unverified. Automated browser QA and race-detector
   verification remain outstanding. Phase 3 closure still requires review of these
   remaining limits; Phase 4 has not started.
+
+
+## Business opening hours policy (2026-10-18)
+
+Customer calendars and booking validation now use the selected location's weekly opening hours and closed dates. Assigned staff and resources follow those hours; saved individual availability windows no longer constrain slots. Existing window data is retained for compatibility, but the business scheduling UI no longer presents it as a booking requirement. This supersedes earlier instructions requiring staff/resource windows.
+
+Service duration, preparation/cleanup, advance notice, active assignments, staff booking conflicts and resource capacity remain enforced. Creation and rescheduling use the same rules as the public calendar. Owners manage availability under Business > Scheduling > Location hours and closed dates. No migration or change to saved business hours is needed.
+
+
+## Customer booking timezone revision (2026-10-18)
+
+Customers select a service, branch, branch calendar date, and available time. Time choices and confirmation/receipt now automatically display in the browser/device timezone with full local dates, without GMT offsets. The calendar remains explicitly labeled as the date at the branch so opening hours and availability retain their location-based meaning. Custom range start/end inputs also use the device timezone. UTC instants and the expected branch timezone sent to the API remain unchanged.
+
+Verified frontend lint/build, timezone conversion tests (including DST), and browser selection/confirmation in Asia/Shanghai and America/Los_Angeles at mobile/desktop widths. No real booking was created by these browser checks. TO_REVISE.MD was cleared after verification.
+
+Workflow: read TO_REVISE.MD before phase work; clear it only after all listed revisions are fixed and verified. Check user-reported remaining usage before starting another bounded task; account usage is not exposed to this agent and cannot be automatically refreshed. The user reported a usage reset before Phase 7.8; current balance remains unavailable to the agent.
+
+
+### UI refinement (2026-10-19)
+Design-only revision: ivory/ink/vermilion palette, restrained motion, membership-aware
+header, responsive business workspace navigation and four grouped settings sections.
+Existing API and booking behavior remain unchanged. No deployment. See
+UI_DESIGN_FOUNDATION.md for validation and the file manifest; TO_REVISE.MD retains
+unfinished whole-site visual work. Phase 8.2 remains pending.
+
+
+### Booking organization and account UI (2026-10-19)
+Customer/business status categories, individual booking cards and inline controls
+are implemented. Bulk cancellation and business completion use existing endpoints
+with confirmation, per-item results and retry keys. Review-selected supports
+individual rescheduling; permanent deletion is not implemented. Account profile
+layout and business settings navigation improved; Team access moved to People &
+resources. See UI_BOOKING_ORGANIZATION.md for scope, tests and changed filenames.

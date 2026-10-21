@@ -5,13 +5,13 @@ INSERT INTO locations(business_id,name,timezone) VALUES($1,$2,$3) RETURNING *;
 SELECT * FROM locations WHERE business_id=$1 AND id=$2 AND status='active';
 
 -- name: CreateService :one
-INSERT INTO services(business_id,name,duration_minutes) VALUES($1,$2,$3) RETURNING *;
+INSERT INTO services(business_id,name,duration_minutes,all_day) VALUES($1,$2,$3,$4) RETURNING *;
 
 -- name: GetService :one
 SELECT * FROM services WHERE business_id=$1 AND id=$2 AND status='active';
 
 -- name: CreateStaffProfile :one
-INSERT INTO staff_profiles(business_id,name) VALUES($1,$2) RETURNING *;
+INSERT INTO staff_profiles(business_id,name,role_name) VALUES($1,$2,$3) RETURNING *;
 
 -- name: GetStaffProfile :one
 SELECT * FROM staff_profiles WHERE business_id=$1 AND id=$2 AND status='active';

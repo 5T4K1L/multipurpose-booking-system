@@ -1,0 +1,9 @@
+"use client";
+import {useState} from "react";
+import {api,readable} from "../bookings/api";
+type Contact={name:string;phone:string;email:string;notes:string};
+export default function GuestContactEditor({id,disabled,onBusy}:{id:string;disabled:boolean;onBusy:(value:boolean)=>void}){
+ const [draft,setDraft]=useState<Contact|null>(null),[message,setMessage]=useState("");
+ async function open(){onBusy(true);try{setDraft((await api<Contact>(`/api/v1/customer/bookings/${id}/contact`)).data)}catch(e){setMessage(readable(e))}finally{onBusy(false)}}
+ return <section className="mt-4"><button className="booking-detail-toggle" disabled={disabled} onClick={()=>void open()}>Edit contact details</button>{draft&&<form className="grid gap-3 sm:grid-cols-2" onSubmit={async e=>{e.preventDefault();onBusy(true);try{await api(`/api/v1/customer/bookings/${id}/contact`,{method:"PATCH",body:JSON.stringify(draft)});setDraft(null);setMessage("Contact details updated. The business can see your changes.")}catch(e){setMessage(readable(e))}finally{onBusy(false)}}}><fieldset className="contents" disabled={disabled}>{([['name','Your name'],['phone','Contact number'],['email','Email (optional)'],['notes','Additional information']] as const).map(([key,label])=><label key={key}>{label}<input className="ui-input mt-1 block w-full border p-3" required={key==='name'||key==='phone'} maxLength={key==='notes'?1000:key==='email'?254:key==='phone'?40:80} type={key==='email'?'email':'text'} value={draft[key]} onChange={e=>setDraft({...draft,[key]:e.target.value})}/></label>)}<button className="cta cta-primary" type="submit">Save contact details</button><button className="cta" type="button" onClick={()=>setDraft(null)}>Keep current details</button></fieldset></form>}{message&&<p role="status" className="text-sm">{message}</p>}</section>
+}
